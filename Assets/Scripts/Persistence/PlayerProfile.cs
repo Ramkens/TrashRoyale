@@ -11,7 +11,7 @@ namespace TrashRoyale.Persistence
         public int trophies = 0;
         public int wins = 0;
         public int losses = 0;
-        public string playerName = "Хрюнделик";
+        public string playerName = "Треш Рояль";
         public List<string> deck = new List<string> { "knight", "pig", "skibidi", "pocoyo", "amongus", "cheems", "nyancat", "fireball" };
 
         public static PlayerProfile Load()

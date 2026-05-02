@@ -18,6 +18,10 @@ namespace TrashRoyale.UI
         Canvas _canvas;
         GameObject _endScreen;
         Text _endText;
+        GameObject _dragGhost;
+        Image _dragGhostArt;
+        GameObject _placementHint;
+        PlacementOverlay _placement;
 
         public Camera arenaCamera;
         public bool placementMode { get; private set; }
@@ -74,45 +78,100 @@ namespace TrashRoyale.UI
             rtPhase.anchoredPosition = new Vector2(0, -140);
             _phaseText.color = new Color(1f, 0.85f, 0.4f);
 
-            var bottom = UIFactory.MakePanel(transform, "BottomBar", new Color(0, 0, 0, 0.55f));
-            var brt = bottom.GetComponent<RectTransform>();
+            // Transparent container for the elixir + cards row, sized so cards have
+            // their own slot and elixir bar sits ABOVE them (not behind).
+            var bottom = new GameObject("BottomBar");
+            bottom.transform.SetParent(transform, false);
+            var brt = bottom.AddComponent<RectTransform>();
             brt.anchorMin = new Vector2(0, 0);
             brt.anchorMax = new Vector2(1, 0);
             brt.pivot = new Vector2(0.5f, 0f);
-            brt.sizeDelta = new Vector2(0, 320);
+            brt.sizeDelta = new Vector2(0, 380);
             brt.anchoredPosition = Vector2.zero;
 
-            var elixirRow = UIFactory.MakePanel(bottom.transform, "ElixirRow", new Color(0.1f, 0.1f, 0.18f, 0.8f));
+            // Elixir bar in CR style: drop+number on the left, segmented horizontal
+            // fill bar to the right. Sits above the cards (not behind).
+            var elixirRow = UIFactory.MakePanel(bottom.transform, "ElixirRow", new Color(0.05f, 0.05f, 0.1f, 0.9f));
             var ert = elixirRow.GetComponent<RectTransform>();
             ert.anchorMin = new Vector2(0, 1);
             ert.anchorMax = new Vector2(1, 1);
             ert.pivot = new Vector2(0.5f, 1f);
-            ert.sizeDelta = new Vector2(-32, 40);
-            ert.anchoredPosition = new Vector2(0, -8);
+            ert.sizeDelta = new Vector2(-32, 70);
+            ert.anchoredPosition = new Vector2(0, -6);
+
+            // Big elixir count (CR-style purple drop with white digit)
+            var drop = new GameObject("ElixirDrop");
+            drop.transform.SetParent(elixirRow.transform, false);
+            var drt = drop.AddComponent<RectTransform>();
+            drt.anchorMin = new Vector2(0, 0.5f);
+            drt.anchorMax = new Vector2(0, 0.5f);
+            drt.pivot = new Vector2(0.5f, 0.5f);
+            drt.sizeDelta = new Vector2(76, 76);
+            drt.anchoredPosition = new Vector2(38, 0);
+            var dropImg = drop.AddComponent<Image>();
+            dropImg.color = new Color(0.7f, 0.25f, 0.85f);
+
+            _elixirText = UIFactory.MakeText(drop.transform, "ElixirNum", "5", 50, TextAnchor.MiddleCenter);
+            var etrt = _elixirText.GetComponent<RectTransform>();
+            etrt.anchorMin = Vector2.zero;
+            etrt.anchorMax = Vector2.one;
+            etrt.offsetMin = etrt.offsetMax = Vector2.zero;
+            _elixirText.fontStyle = FontStyle.Bold;
+            _elixirText.color = Color.white;
+            var elOutline = _elixirText.gameObject.AddComponent<Outline>();
+            elOutline.effectColor = new Color(0, 0, 0, 0.85f);
+            elOutline.effectDistance = new Vector2(3, -3);
 
             _elixirBar = UIFactory.MakeSlider(elixirRow.transform, "Bar", new Color(0.95f, 0.4f, 1f));
             var srt = _elixirBar.GetComponent<RectTransform>();
             srt.anchorMin = new Vector2(0, 0);
             srt.anchorMax = new Vector2(1, 1);
-            srt.offsetMin = new Vector2(8, 6);
-            srt.offsetMax = new Vector2(-100, -6);
+            srt.offsetMin = new Vector2(86, 8);
+            srt.offsetMax = new Vector2(-12, -8);
 
-            _elixirText = UIFactory.MakeText(elixirRow.transform, "ElixirNum", "5", 36, TextAnchor.MiddleCenter);
-            var etrt = _elixirText.GetComponent<RectTransform>();
-            etrt.anchorMin = new Vector2(1, 0);
-            etrt.anchorMax = new Vector2(1, 1);
-            etrt.pivot = new Vector2(1, 0.5f);
-            etrt.sizeDelta = new Vector2(96, 0);
-            etrt.anchoredPosition = new Vector2(-6, 0);
+            // Tick marks at each elixir step (10 total)
+            for (int i = 1; i < 10; i++)
+            {
+                var tick = new GameObject($"Tick_{i}");
+                tick.transform.SetParent(_elixirBar.transform, false);
+                var tRt = tick.AddComponent<RectTransform>();
+                tRt.anchorMin = new Vector2(i / 10f, 0.1f);
+                tRt.anchorMax = new Vector2(i / 10f, 0.9f);
+                tRt.pivot = new Vector2(0.5f, 0.5f);
+                tRt.sizeDelta = new Vector2(2, 0);
+                tRt.anchoredPosition = Vector2.zero;
+                var tImg = tick.AddComponent<Image>();
+                tImg.color = new Color(0, 0, 0, 0.5f);
+                tImg.raycastTarget = false;
+            }
 
             for (int i = 0; i < 4; i++)
             {
                 var slot = UICardSlot.Build(bottom.transform, i);
                 slot.OnDragStart += BeginDrag;
+                slot.OnDragMove += DragMove;
                 slot.OnDragEnd += EndDrag;
                 _cardSlots[i] = slot;
             }
             _nextCard = UINextCard.Build(bottom.transform);
+            BuildDragGhost();
+        }
+
+        void BuildDragGhost()
+        {
+            _dragGhost = new GameObject("DragGhost");
+            _dragGhost.transform.SetParent(transform, false);
+            var rt = _dragGhost.AddComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(220, 220);
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            _dragGhostArt = _dragGhost.AddComponent<Image>();
+            _dragGhostArt.preserveAspect = true;
+            _dragGhostArt.raycastTarget = false;
+            var cg = _dragGhost.AddComponent<CanvasGroup>();
+            cg.blocksRaycasts = false;
+            cg.alpha = 0.85f;
+            _dragGhost.SetActive(false);
         }
 
         void Update()
@@ -161,24 +220,76 @@ namespace TrashRoyale.UI
         {
             placementMode = true;
             _draggingSlot = slot;
+            var match = MatchManager.I;
+            var card = match != null && match.PlayerDeck != null
+                ? match.PlayerDeck.Hand[slot] : null;
+            if (_dragGhost != null && _cardSlots[slot] != null)
+            {
+                _dragGhostArt.sprite = _cardSlots[slot].Art;
+                _dragGhostArt.color = Color.white;
+                _dragGhost.SetActive(true);
+            }
+            if (_placement == null) _placement = PlacementOverlay.Create();
+            _placement.Show(card);
+        }
+
+        void DragMove(int slot, Vector2 screenPos)
+        {
+            if (_dragGhost != null && _dragGhost.activeSelf)
+            {
+                var rt = _dragGhost.GetComponent<RectTransform>();
+                var canvasRt = _canvas.transform as RectTransform;
+                if (canvasRt != null)
+                {
+                    Vector2 local;
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        canvasRt, screenPos,
+                        _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : arenaCamera,
+                        out local);
+                    rt.anchoredPosition = local;
+                }
+            }
+            // Move the world-space cursor ring to the touch position so the player
+            // sees exactly where the unit will spawn / spell will land.
+            if (_placement != null && arenaCamera != null)
+            {
+                var ray = arenaCamera.ScreenPointToRay(screenPos);
+                if (TryRaycastPlane(ray, out var worldPoint))
+                {
+                    var match = MatchManager.I;
+                    var card = match != null && match.PlayerDeck != null
+                        ? match.PlayerDeck.Hand[slot] : null;
+                    bool valid = ArenaController.I != null && card != null
+                        && ArenaController.I.IsValidPlacement(Team.Player, worldPoint, card);
+                    _placement.SetCursor(worldPoint, valid);
+                }
+            }
         }
 
         void EndDrag(int slot, Vector2 screenPos)
         {
             placementMode = false;
+            if (_dragGhost != null) _dragGhost.SetActive(false);
+            if (_placement != null) _placement.Hide();
             if (_draggingSlot != slot) { _draggingSlot = -1; return; }
             _draggingSlot = -1;
             var match = MatchManager.I;
             if (match == null || arenaCamera == null) return;
+            Vector3 worldPoint;
             var ray = arenaCamera.ScreenPointToRay(screenPos);
-            if (Physics.Raycast(ray, out var hit, 100f, ~0, QueryTriggerInteraction.Ignore))
+            if (!TryRaycastPlane(ray, out worldPoint))
             {
-                match.TryDeployPlayer(slot, hit.point);
+                if (Physics.Raycast(ray, out var hit, 100f, ~0, QueryTriggerInteraction.Ignore))
+                    worldPoint = hit.point;
+                else return;
             }
-            else if (TryRaycastPlane(ray, out var pt))
-            {
-                match.TryDeployPlayer(slot, pt);
-            }
+            // Don't auto-clamp into the player's own half: with broken enemy towers
+            // the deploy zone genuinely extends across the river, and clamping
+            // would make those drops fail. Bounds clamping for x is still helpful
+            // so the unit doesn't end up sliding off the side.
+            worldPoint.x = Mathf.Clamp(worldPoint.x, -ArenaController.HalfWidth + 0.3f, ArenaController.HalfWidth - 0.3f);
+            worldPoint.z = Mathf.Clamp(worldPoint.z, -ArenaController.HalfLength + 0.3f, ArenaController.HalfLength - 0.3f);
+            match.TryDeployPlayer(slot, worldPoint);
         }
 
         bool TryRaycastPlane(Ray ray, out Vector3 point)

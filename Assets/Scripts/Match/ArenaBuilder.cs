@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TrashRoyale.Combat;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Match
 {
@@ -19,8 +20,7 @@ namespace TrashRoyale.Match
 
         static Material LitMat(Color c, Texture2D tex = null, Vector2? tile = null)
         {
-            var sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var m = new Material(sh);
+            var m = new Material(SafeShader.Opaque);
             m.color = c;
             if (tex != null)
             {
@@ -46,7 +46,7 @@ namespace TrashRoyale.Match
             bgPlane.transform.position = new Vector3(0, 6f, ArenaController.HalfLength + 14f);
             bgPlane.transform.localScale = new Vector3(40f, 22f, 1f);
             bgPlane.transform.rotation = Quaternion.Euler(0, 0, 0);
-            var bgMat = new Material(Shader.Find("Unlit/Texture") ?? Shader.Find("Standard"));
+            var bgMat = new Material(SafeShader.Opaque);
             bgMat.mainTexture = Tex("UI/menu_bg");
             bgMat.color = new Color(0.7f, 0.7f, 0.85f);
             bgPlane.GetComponent<MeshRenderer>().sharedMaterial = bgMat;
@@ -168,9 +168,13 @@ namespace TrashRoyale.Match
             var camGo = Camera.main != null ? Camera.main.gameObject : new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             var cam = camGo.GetComponent<Camera>() ?? camGo.AddComponent<Camera>();
-            cam.transform.position = new Vector3(0, 11.5f, -7.5f);
-            cam.transform.rotation = Quaternion.Euler(50f, 0f, 0f);
-            cam.fieldOfView = 50f;
+            // High Clash Royale-style 3/4 angle: nearly top-down with a slight
+            // pitch back so the arena fills the screen. Both halves visible.
+            cam.transform.position = new Vector3(0f, 22f, -12f);
+            cam.transform.rotation = Quaternion.Euler(64f, 0f, 0f);
+            cam.fieldOfView = 52f;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 60f;
             cam.backgroundColor = new Color(0.18f, 0.22f, 0.45f);
             cam.clearFlags = CameraClearFlags.SolidColor;
             if (camGo.GetComponent<AudioListener>() == null) camGo.AddComponent<AudioListener>();

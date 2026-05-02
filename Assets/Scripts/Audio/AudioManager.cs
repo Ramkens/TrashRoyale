@@ -39,13 +39,23 @@ namespace TrashRoyale.Audio
 
         public static void PlayMusic(string id)
         {
+            PlayMusic(id, -1f);
+        }
+
+        public static void PlayMusic(string id, float volume)
+        {
             if (I == null) Boot();
             if (I._clips.TryGetValue(id, out var clip))
             {
                 if (I._musicSource.clip != clip)
                 {
                     I._musicSource.clip = clip;
+                    I._musicSource.volume = volume >= 0f ? volume : I.MusicVolume;
                     I._musicSource.Play();
+                }
+                else
+                {
+                    I._musicSource.volume = volume >= 0f ? volume : I.MusicVolume;
                 }
             }
         }

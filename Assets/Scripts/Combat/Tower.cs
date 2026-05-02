@@ -26,7 +26,11 @@ namespace TrashRoyale.Combat
             isBuilding = true;
             isActive = !king;
             CombatRegistry.Register(this);
-            _hpBar = HpBar.Create(this, t == Team.Player ? new Color(0.2f, 0.6f, 1f) : new Color(1f, 0.3f, 0.2f), 1.4f);
+            float hpY = king ? 4.4f : 3.4f;
+            float hpW = king ? 2.4f : 1.7f;
+            _hpBar = HpBar.Create(this,
+                t == Team.Player ? new Color(0.18f, 0.55f, 1f) : new Color(1f, 0.25f, 0.2f),
+                hpY, hpW, /*showNumber*/ true);
         }
 
         void OnDestroy() => CombatRegistry.Unregister(this);
