@@ -33,6 +33,11 @@ namespace TrashRoyale.Net
             _ws.OnMessage = OnNetMessage;
             _ws.OnOpen = OnNetOpen;
             _ws.OnClose = (code, msg) => Debug.Log($"[Net] closed {code}/{msg}");
+            _ws.OnReconnecting = () => Debug.Log("[Net] reconnecting…");
+            _ws.OnReconnected = () => Debug.Log("[Net] reconnected");
+            // Free-tier Render redeploys take ~5-15s — keep retrying for a
+            // full minute so a brief outage doesn't drop the match.
+            _ws.EnableAutoReconnect(60f);
             _ws.Connect($"{url}?room={req.netRoomCode}&role={(IsHost ? "host" : "guest")}");
         }
 
