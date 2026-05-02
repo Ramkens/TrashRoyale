@@ -168,9 +168,12 @@ namespace TrashRoyale.Match
             var camGo = Camera.main != null ? Camera.main.gameObject : new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             var cam = camGo.GetComponent<Camera>() ?? camGo.AddComponent<Camera>();
-            cam.transform.position = new Vector3(0, 11.5f, -7.5f);
-            cam.transform.rotation = Quaternion.Euler(50f, 0f, 0f);
-            cam.fieldOfView = 50f;
+            // Clash Royale-ish 3/4 angle from behind the player's tower.
+            cam.transform.position = new Vector3(0f, 13.5f, -10.5f);
+            cam.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
+            cam.fieldOfView = 38f;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 60f;
             cam.backgroundColor = new Color(0.18f, 0.22f, 0.45f);
             cam.clearFlags = CameraClearFlags.SolidColor;
             if (camGo.GetComponent<AudioListener>() == null) camGo.AddComponent<AudioListener>();

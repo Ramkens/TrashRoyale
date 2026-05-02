@@ -75,6 +75,15 @@ namespace TrashRoyale.Util
             return m;
         }
 
+        public static Material NewTexturedSpriteMaterial(Texture tex)
+        {
+            var m = new Material(Sprite);
+            if (tex != null) m.mainTexture = tex;
+            // Sprites/Default uses _Color tint; default to white so the texture is unmodulated.
+            if (m.HasProperty("_Color")) m.color = Color.white;
+            return m;
+        }
+
         static Shader First(params string[] names)
         {
             foreach (var n in names)
