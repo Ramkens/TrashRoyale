@@ -49,13 +49,14 @@ namespace TrashRoyale.UI
             t.alignment = align;
             t.color = Color.white;
             t.font = DefaultFont;
+            t.fontStyle = FontStyle.Bold;
             t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
             t.raycastTarget = false;
-            // Add outline by default for readability
+            // Heavy black outline for readability
             var outline = go.AddComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            outline.effectDistance = new Vector2(2, -2);
+            outline.effectColor = new Color(0f, 0f, 0f, 1f);
+            outline.effectDistance = new Vector2(3, -3);
             return t;
         }
 
@@ -78,8 +79,8 @@ namespace TrashRoyale.UI
             go.transform.SetParent(parent, false);
             var rt = go.AddComponent<RectTransform>();
             var img = go.AddComponent<Image>();
-            img.color = tint;
-            // Try to apply a stylized button sprite if we have one
+            img.raycastTarget = true;
+            // All buttons use the yellow sliced sprite — ignore tint
             var btnSprite = LoadSprite("UI/btn_gold");
             if (btnSprite != null)
             {
@@ -87,20 +88,37 @@ namespace TrashRoyale.UI
                 img.type = Image.Type.Sliced;
                 img.color = Color.white;
             }
+            else
+            {
+                img.color = new Color(1f, 0.78f, 0.15f, 1f);
+            }
             var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
             if (onClick != null) btn.onClick.AddListener(onClick);
             var colors = btn.colors;
-            colors.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
-            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.05f, 1.05f, 1.05f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            colors.selectedColor = Color.white;
+            colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 1f);
             btn.colors = colors;
 
-            var txt = MakeText(go.transform, "Label", label, 44, TextAnchor.MiddleCenter);
+            var txt = MakeText(go.transform, "Label", label, 56, TextAnchor.MiddleCenter);
             txt.fontStyle = FontStyle.Bold;
+            txt.color = Color.white;
+            txt.raycastTarget = false;
+            var outline = txt.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.effectColor = new Color(0f, 0f, 0f, 1f);
+                outline.effectDistance = new Vector2(4, -4);
+            }
             var trt = txt.GetComponent<RectTransform>();
             trt.anchorMin = Vector2.zero;
             trt.anchorMax = Vector2.one;
-            trt.offsetMin = trt.offsetMax = Vector2.zero;
-            txt.color = Color.white;
+            // shift label up a bit because the bottom shadow on the sprite makes it look offset
+            trt.offsetMin = new Vector2(0, 8);
+            trt.offsetMax = new Vector2(0, 0);
             return btn;
         }
 
@@ -108,11 +126,75 @@ namespace TrashRoyale.UI
         public static Sprite LoadSprite(string resourcePath)
         {
             if (_spriteCache.TryGetValue(resourcePath, out var s)) return s;
+            // First try as native Sprite asset (preserves 9-slice border from .meta)
+            var sprite = Resources.Load<Sprite>(resourcePath);
+            if (sprite != null) { _spriteCache[resourcePath] = sprite; return sprite; }
             var tex = Resources.Load<Texture2D>(resourcePath);
             if (tex == null) { _spriteCache[resourcePath] = null; return null; }
-            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, new Vector4(40, 40, 40, 40));
+            sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, new Vector4(60, 60, 60, 60));
             _spriteCache[resourcePath] = sprite;
             return sprite;
+        }
+
+        public static Image MakeIcon(Transform parent, string resourcePath, Vector2 size)
+        {
+            var go = new GameObject("Icon_" + resourcePath);
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.sizeDelta = size;
+            var img = go.AddComponent<Image>();
+            img.raycastTarget = false;
+            var sp = LoadSprite(resourcePath);
+            if (sp != null) { img.sprite = sp; img.preserveAspect = true; }
+            else img.color = new Color(1, 1, 1, 0.3f);
+            return img;
+        }
+
+        public static Image MakeCardArt(Transform parent, string cardId)
+        {
+            var go = new GameObject("Art_" + cardId);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<RectTransform>();
+            var img = go.AddComponent<Image>();
+            img.raycastTarget = false;
+            var sp = LoadSprite("CardArt/" + cardId);
+            if (sp != null) { img.sprite = sp; img.preserveAspect = true; }
+            else img.color = new Color(0.6f, 0.6f, 0.6f, 1f);
+            return img;
+        }
+
+        public static InputField MakeInputField(Transform parent, string name, string startValue, int size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<RectTransform>();
+            var img = go.AddComponent<Image>();
+            img.color = new Color(0.05f, 0.07f, 0.18f, 0.85f);
+            img.raycastTarget = true;
+            var input = go.AddComponent<InputField>();
+            input.targetGraphic = img;
+
+            var text = MakeText(go.transform, "Text", startValue, size, TextAnchor.MiddleLeft);
+            text.raycastTarget = false;
+            text.color = Color.white;
+            text.supportRichText = false;
+            var trt = text.GetComponent<RectTransform>();
+            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
+            trt.offsetMin = new Vector2(20, 4); trt.offsetMax = new Vector2(-20, -4);
+
+            var placeholder = MakeText(go.transform, "Placeholder", "Введи ник", size, TextAnchor.MiddleLeft);
+            placeholder.raycastTarget = false;
+            placeholder.color = new Color(1, 1, 1, 0.4f);
+            placeholder.fontStyle = FontStyle.Italic;
+            var prt = placeholder.GetComponent<RectTransform>();
+            prt.anchorMin = Vector2.zero; prt.anchorMax = Vector2.one;
+            prt.offsetMin = new Vector2(20, 4); prt.offsetMax = new Vector2(-20, -4);
+
+            input.textComponent = text;
+            input.placeholder = placeholder;
+            input.text = startValue;
+            input.characterLimit = 16;
+            return input;
         }
 
         public static Slider MakeSlider(Transform parent, string name, Color fillColor)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using TrashRoyale.Audio;
 using TrashRoyale.Persistence;
@@ -14,6 +15,8 @@ namespace TrashRoyale.Bootstrap
         Canvas _canvas;
         Text _trophiesText;
         Text _playerNameText;
+        Text _tierText;
+        Transform _deckPreview;
         PlayerProfile _profile;
 
         void Start()
@@ -23,8 +26,17 @@ namespace TrashRoyale.Bootstrap
             _profile = PlayerProfile.Load();
 
             EnsureCamera();
+            EnsureEventSystem();
             BuildUI();
             AudioManager.PlayMusic("menu_music");
+        }
+
+        void EnsureEventSystem()
+        {
+            if (EventSystem.current != null) return;
+            var go = new GameObject("EventSystem");
+            go.AddComponent<EventSystem>();
+            go.AddComponent<StandaloneInputModule>();
         }
 
         void EnsureCamera()
@@ -34,7 +46,7 @@ namespace TrashRoyale.Bootstrap
             go.tag = "MainCamera";
             var cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.07f, 0.08f, 0.15f);
+            cam.backgroundColor = new Color(0.07f, 0.13f, 0.32f);
             go.AddComponent<AudioListener>();
         }
 
@@ -49,123 +61,201 @@ namespace TrashRoyale.Bootstrap
             scaler.matchWidthOrHeight = 1f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // Background art
-            var bg = UIFactory.MakePanel(_canvas.transform, "BG", new Color(0.13f, 0.18f, 0.32f));
+            BuildBackground();
+            BuildPlayerBanner();
+            BuildTitle();
+            BuildBattleCenter();
+            BuildBottomNav();
+        }
+
+        void BuildBackground()
+        {
+            var bg = UIFactory.MakePanel(_canvas.transform, "BG", new Color(0.13f, 0.32f, 0.6f));
+            bg.raycastTarget = false;
             var bgRt = bg.GetComponent<RectTransform>();
             bgRt.anchorMin = Vector2.zero;
             bgRt.anchorMax = Vector2.one;
             bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
-            var bgTex = Resources.Load<Texture2D>("UI/menu_bg");
-            if (bgTex != null)
-            {
-                bg.sprite = Sprite.Create(bgTex, new Rect(0, 0, bgTex.width, bgTex.height), new Vector2(0.5f, 0.5f));
-                bg.color = Color.white;
-                bg.preserveAspect = false;
-                bg.type = Image.Type.Simple;
-            }
-
-            // Top player banner: avatar circle + name + trophy
-            BuildPlayerBanner();
-
-            // Title
-            var title = UIFactory.MakeText(_canvas.transform, "Title", "TRASH ROYALE", 150, TextAnchor.MiddleCenter);
-            var trt = title.GetComponent<RectTransform>();
-            trt.anchorMin = new Vector2(0, 0.66f);
-            trt.anchorMax = new Vector2(1, 0.78f);
-            trt.offsetMin = trt.offsetMax = Vector2.zero;
-            title.color = new Color(1f, 0.92f, 0.3f);
-            title.fontStyle = FontStyle.BoldAndItalic;
-            var titleOutline = title.GetComponent<Outline>();
-            if (titleOutline != null) { titleOutline.effectColor = new Color(0.4f, 0.15f, 0f, 1f); titleOutline.effectDistance = new Vector2(5, -5); }
-
-            var subtitle = UIFactory.MakeText(_canvas.transform, "Sub", "POMOIKA EDITION  ·  by Kuniman", 38, TextAnchor.MiddleCenter);
-            var srt = subtitle.GetComponent<RectTransform>();
-            srt.anchorMin = new Vector2(0, 0.62f);
-            srt.anchorMax = new Vector2(1, 0.66f);
-            srt.offsetMin = srt.offsetMax = Vector2.zero;
-            subtitle.color = new Color(1f, 0.85f, 0.4f);
-
-            // Big PvE button (red/gold)
-            var btnPvE = UIFactory.MakeButton(_canvas.transform, "PvE", "БОЙ ЗА КУБКИ", () =>
-            {
-                AudioManager.PlaySfx("card_play");
-                StartPvE();
-            }, new Color(0.95f, 0.35f, 0.25f));
-            var prt1 = btnPvE.GetComponent<RectTransform>();
-            prt1.anchorMin = new Vector2(0.1f, 0.42f);
-            prt1.anchorMax = new Vector2(0.9f, 0.55f);
-            prt1.offsetMin = prt1.offsetMax = Vector2.zero;
-            
-
-            // Friendly button (blue)
-            var btnPvP = UIFactory.MakeButton(_canvas.transform, "Friendly", "ДРУЖЕСКИЙ БОЙ", () =>
-            {
-                AudioManager.PlaySfx("card_play");
-                FriendlyBattlePopup.Open(_canvas.transform);
-            }, new Color(0.25f, 0.55f, 0.95f));
-            var prt2 = btnPvP.GetComponent<RectTransform>();
-            prt2.anchorMin = new Vector2(0.1f, 0.3f);
-            prt2.anchorMax = new Vector2(0.9f, 0.4f);
-            prt2.offsetMin = prt2.offsetMax = Vector2.zero;
-            
-
-            // Deck button (gold)
-            var btnDeck = UIFactory.MakeButton(_canvas.transform, "Deck", "КОЛОДА", () =>
-            {
-                AudioManager.PlaySfx("card_play");
-                DeckEditor.Open(_canvas.transform, _profile);
-            }, new Color(0.95f, 0.75f, 0.2f));
-            var prt3 = btnDeck.GetComponent<RectTransform>();
-            prt3.anchorMin = new Vector2(0.1f, 0.18f);
-            prt3.anchorMax = new Vector2(0.9f, 0.28f);
-            prt3.offsetMin = prt3.offsetMax = Vector2.zero;
-            
-
-            // Footer
-            var footer = UIFactory.MakeText(_canvas.transform, "Footer", "v0.1.0  ·  Kuniman Studios", 28, TextAnchor.MiddleCenter);
-            var frt = footer.GetComponent<RectTransform>();
-            frt.anchorMin = new Vector2(0, 0.01f);
-            frt.anchorMax = new Vector2(1, 0.05f);
-            frt.offsetMin = frt.offsetMax = Vector2.zero;
-            footer.color = new Color(1f, 1f, 1f, 0.45f);
+            var bgSprite = UIFactory.LoadSprite("UI/menu_bg");
+            if (bgSprite != null) { bg.sprite = bgSprite; bg.color = Color.white; }
         }
 
         void BuildPlayerBanner()
         {
-            // Banner background panel
-            var banner = UIFactory.MakePanel(_canvas.transform, "Banner", new Color(0.05f, 0.07f, 0.18f, 0.85f));
+            var banner = UIFactory.MakePanel(_canvas.transform, "Banner", new Color(0.05f, 0.07f, 0.18f, 0.9f));
             var brt = banner.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0.04f, 0.86f);
+            brt.anchorMin = new Vector2(0.04f, 0.88f);
             brt.anchorMax = new Vector2(0.96f, 0.97f);
             brt.offsetMin = brt.offsetMax = Vector2.zero;
-            var bannerSprite = UIFactory.LoadSprite("UI/banner_blue");
-            if (bannerSprite != null) { banner.sprite = bannerSprite; banner.type = Image.Type.Sliced; banner.color = Color.white; }
+            var btnSp = UIFactory.LoadSprite("UI/btn_gold");
+            if (btnSp != null) { banner.sprite = btnSp; banner.type = Image.Type.Sliced; banner.color = new Color(0.25f, 0.45f, 0.85f, 1f); }
 
-            // Player name (no avatar - icon only on Android launcher)
-            _playerNameText = UIFactory.MakeText(banner.transform, "Name", _profile.playerName, 56, TextAnchor.MiddleLeft);
+            // Click whole banner to edit nick
+            var bannerBtn = banner.gameObject.AddComponent<Button>();
+            bannerBtn.targetGraphic = banner;
+            bannerBtn.onClick.AddListener(() =>
+            {
+                AudioManager.PlaySfx("click");
+                NicknamePopup.Open(_canvas.transform, _profile, RefreshBanner);
+            });
+
+            // Player name (tap banner to edit)
+            _playerNameText = UIFactory.MakeText(banner.transform, "Name", _profile.playerName, 50, TextAnchor.MiddleLeft);
             var pnrt = _playerNameText.GetComponent<RectTransform>();
-            pnrt.anchorMin = new Vector2(0.04f, 0.5f);
-            pnrt.anchorMax = new Vector2(0.6f, 1f);
+            pnrt.anchorMin = new Vector2(0.05f, 0.5f);
+            pnrt.anchorMax = new Vector2(0.62f, 1f);
             pnrt.offsetMin = pnrt.offsetMax = Vector2.zero;
             _playerNameText.color = Color.white;
-            _playerNameText.fontStyle = FontStyle.Bold;
-
-            // Trophies (with crown)
-            _trophiesText = UIFactory.MakeText(banner.transform, "Trophies", _profile.trophies + " К", 60, TextAnchor.MiddleRight);
-            var ttrt = _trophiesText.GetComponent<RectTransform>();
-            ttrt.anchorMin = new Vector2(0.55f, 0.2f);
-            ttrt.anchorMax = new Vector2(0.97f, 0.95f);
-            ttrt.offsetMin = ttrt.offsetMax = Vector2.zero;
-            _trophiesText.color = new Color(1f, 0.85f, 0.3f);
-            _trophiesText.fontStyle = FontStyle.Bold;
 
             // Tier label below name
-            var tier = UIFactory.MakeText(banner.transform, "Tier", BotLadder.TierName(_profile.trophies), 32, TextAnchor.MiddleLeft);
-            var trtt = tier.GetComponent<RectTransform>();
-            trtt.anchorMin = new Vector2(0.04f, 0.05f);
-            trtt.anchorMax = new Vector2(0.6f, 0.5f);
+            _tierText = UIFactory.MakeText(banner.transform, "Tier", BotLadder.TierName(_profile.trophies), 28, TextAnchor.MiddleLeft);
+            var trtt = _tierText.GetComponent<RectTransform>();
+            trtt.anchorMin = new Vector2(0.05f, 0.05f);
+            trtt.anchorMax = new Vector2(0.62f, 0.5f);
             trtt.offsetMin = trtt.offsetMax = Vector2.zero;
-            tier.color = new Color(0.85f, 0.85f, 0.95f);
+            _tierText.color = Color.white;
+
+            // Trophies count (right side)
+            _trophiesText = UIFactory.MakeText(banner.transform, "Trophies", _profile.trophies + " \u00A0\u00A0", 64, TextAnchor.MiddleRight);
+            var ttrt = _trophiesText.GetComponent<RectTransform>();
+            ttrt.anchorMin = new Vector2(0.65f, 0.15f);
+            ttrt.anchorMax = new Vector2(0.97f, 0.85f);
+            ttrt.offsetMin = ttrt.offsetMax = Vector2.zero;
+            _trophiesText.color = new Color(1f, 0.93f, 0.4f);
+
+            var trLabel = UIFactory.MakeText(banner.transform, "TrophiesLabel", "\u041a\u0423\u0411\u041a\u0418", 18, TextAnchor.MiddleRight);
+            var trLR = trLabel.GetComponent<RectTransform>();
+            trLR.anchorMin = new Vector2(0.65f, 0f);
+            trLR.anchorMax = new Vector2(0.97f, 0.18f);
+            trLR.offsetMin = trLR.offsetMax = Vector2.zero;
+            trLabel.color = new Color(1f, 1f, 1f, 0.7f);
+        }
+
+        void RefreshBanner()
+        {
+            if (_playerNameText != null) _playerNameText.text = _profile.playerName;
+            if (_trophiesText != null) _trophiesText.text = _profile.trophies.ToString();
+            if (_tierText != null) _tierText.text = BotLadder.TierName(_profile.trophies);
+        }
+
+        void BuildTitle()
+        {
+            var title = UIFactory.MakeText(_canvas.transform, "Title", "TRASH ROYALE", 110, TextAnchor.MiddleCenter);
+            var trt = title.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0, 0.74f);
+            trt.anchorMax = new Vector2(1, 0.86f);
+            trt.offsetMin = trt.offsetMax = Vector2.zero;
+            title.color = new Color(1f, 0.93f, 0.45f);
+            var outline = title.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.effectColor = new Color(0f, 0f, 0f, 1f);
+                outline.effectDistance = new Vector2(7, -7);
+            }
+            var shadow = title.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            shadow.effectDistance = new Vector2(0, -10);
+        }
+
+        void BuildBattleCenter()
+        {
+            // Big PvE button
+            var btnPvE = UIFactory.MakeButton(_canvas.transform, "PvE", "БОЙ ЗА КУБКИ", () =>
+            {
+                AudioManager.PlaySfx("card_play");
+                StartPvE();
+            });
+            var prt = btnPvE.GetComponent<RectTransform>();
+            prt.anchorMin = new Vector2(0.12f, 0.42f);
+            prt.anchorMax = new Vector2(0.88f, 0.62f);
+            prt.offsetMin = prt.offsetMax = Vector2.zero;
+
+            // Deck preview
+            var deckLabel = UIFactory.MakeText(_canvas.transform, "DeckLabel", "ТЕКУЩАЯ КОЛОДА", 28, TextAnchor.MiddleCenter);
+            var dlrt = deckLabel.GetComponent<RectTransform>();
+            dlrt.anchorMin = new Vector2(0, 0.34f);
+            dlrt.anchorMax = new Vector2(1, 0.39f);
+            dlrt.offsetMin = dlrt.offsetMax = Vector2.zero;
+            deckLabel.color = Color.white;
+
+            var preview = UIFactory.MakePanel(_canvas.transform, "DeckPreview", new Color(0, 0, 0, 0.35f));
+            var pvr = preview.GetComponent<RectTransform>();
+            pvr.anchorMin = new Vector2(0.04f, 0.16f);
+            pvr.anchorMax = new Vector2(0.96f, 0.34f);
+            pvr.offsetMin = pvr.offsetMax = Vector2.zero;
+            preview.raycastTarget = false;
+            _deckPreview = preview.transform;
+            RebuildDeckPreview();
+        }
+
+        void RebuildDeckPreview()
+        {
+            if (_deckPreview == null) return;
+            for (int i = _deckPreview.childCount - 1; i >= 0; i--) Destroy(_deckPreview.GetChild(i).gameObject);
+            for (int i = 0; i < 8; i++)
+            {
+                int idx = i;
+                string id = i < _profile.deck.Count ? _profile.deck[i] : null;
+                var card = id != null ? CardDatabase.Get(id) : null;
+
+                var cell = new GameObject("Cell_" + i);
+                cell.transform.SetParent(_deckPreview, false);
+                var cr = cell.AddComponent<RectTransform>();
+                float pad = 0.012f;
+                float cellW = (1f - pad * 9f) / 8f;
+                cr.anchorMin = new Vector2(pad + idx * (cellW + pad), 0.05f);
+                cr.anchorMax = new Vector2(pad + idx * (cellW + pad) + cellW, 0.95f);
+                cr.offsetMin = cr.offsetMax = Vector2.zero;
+                var cellImg = cell.AddComponent<Image>();
+                cellImg.color = new Color(0.05f, 0.08f, 0.18f, 0.85f);
+
+                if (card != null)
+                {
+                    var art = UIFactory.MakeCardArt(cell.transform, card.id);
+                    var artRt = art.GetComponent<RectTransform>();
+                    artRt.anchorMin = new Vector2(0.05f, 0.18f);
+                    artRt.anchorMax = new Vector2(0.95f, 0.95f);
+                    artRt.offsetMin = artRt.offsetMax = Vector2.zero;
+
+                    var costTxt = UIFactory.MakeText(cell.transform, "Cost", card.elixirCost.ToString(), 26, TextAnchor.MiddleCenter);
+                    var crrt = costTxt.GetComponent<RectTransform>();
+                    crrt.anchorMin = new Vector2(0, 0);
+                    crrt.anchorMax = new Vector2(1, 0.18f);
+                    crrt.offsetMin = crrt.offsetMax = Vector2.zero;
+                    costTxt.color = new Color(1f, 0.55f, 0.95f, 1f);
+                }
+            }
+        }
+
+        void BuildBottomNav()
+        {
+            var nav = UIFactory.MakePanel(_canvas.transform, "BottomNav", new Color(0.04f, 0.06f, 0.14f, 0.92f));
+            var nrt = nav.GetComponent<RectTransform>();
+            nrt.anchorMin = new Vector2(0, 0);
+            nrt.anchorMax = new Vector2(1, 0.13f);
+            nrt.offsetMin = nrt.offsetMax = Vector2.zero;
+
+            // Left tab: КОЛОДА
+            var deckBtn = UIFactory.MakeButton(nav.transform, "DeckTab", "КОЛОДА", () =>
+            {
+                AudioManager.PlaySfx("click");
+                DeckEditor.Open(_canvas.transform, _profile, RebuildDeckPreview);
+            });
+            var drt = deckBtn.GetComponent<RectTransform>();
+            drt.anchorMin = new Vector2(0.03f, 0.15f);
+            drt.anchorMax = new Vector2(0.49f, 0.85f);
+            drt.offsetMin = drt.offsetMax = Vector2.zero;
+
+            // Right tab: ДРУЗЬЯ
+            var friendsBtn = UIFactory.MakeButton(nav.transform, "FriendsTab", "ДРУЗЬЯ", () =>
+            {
+                AudioManager.PlaySfx("click");
+                FriendlyBattlePopup.Open(_canvas.transform);
+            });
+            var frt2 = friendsBtn.GetComponent<RectTransform>();
+            frt2.anchorMin = new Vector2(0.51f, 0.15f);
+            frt2.anchorMax = new Vector2(0.97f, 0.85f);
+            frt2.offsetMin = frt2.offsetMax = Vector2.zero;
         }
 
         void StartPvE()
