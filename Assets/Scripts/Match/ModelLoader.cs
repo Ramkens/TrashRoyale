@@ -44,9 +44,11 @@ namespace TrashRoyale.Match
         // Per-card orientation correction applied BEFORE measuring bounds.
         // Sketchfab models authored Z-up or facing -Z look like they're lying
         // on their belly in Unity (Y-up, +Z forward); rotating fixes that.
+        // NOTE: pig is intentionally NOT here — pigs walk horizontally on 4
+        // legs, so the native orientation is correct and rotating would put
+        // the pig on its back.
         static readonly Dictionary<string, Quaternion> OrientationOverride = new()
         {
-            { "pig",     Quaternion.Euler(-90f, 0f, 0f) },
             { "pocoyo",  Quaternion.Euler(-90f, 0f, 0f) },
             { "shrek",   Quaternion.Euler(-90f, 0f, 0f) },
         };
