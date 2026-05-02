@@ -1,10 +1,9 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # Manual-only for now: GameCI Unity build needs a Personal license .ulf
+  # uploaded as UNITY_LICENSE secret (see https://game.ci/docs/github/activation).
+  # Until that's set up, building locally and attaching the APK to the PR.
   workflow_dispatch:
 
 permissions:
