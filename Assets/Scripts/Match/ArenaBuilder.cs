@@ -168,11 +168,11 @@ namespace TrashRoyale.Match
             var camGo = Camera.main != null ? Camera.main.gameObject : new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             var cam = camGo.GetComponent<Camera>() ?? camGo.AddComponent<Camera>();
-            // Clash Royale-ish 3/4 angle from behind the player's tower. Pulled
-            // way back so both halves of the arena are clearly visible at once.
-            cam.transform.position = new Vector3(0f, 17.5f, -14.5f);
-            cam.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
-            cam.fieldOfView = 48f;
+            // High Clash Royale-style 3/4 angle: nearly top-down with a slight
+            // pitch back so the arena fills the screen. Both halves visible.
+            cam.transform.position = new Vector3(0f, 22f, -12f);
+            cam.transform.rotation = Quaternion.Euler(64f, 0f, 0f);
+            cam.fieldOfView = 52f;
             cam.nearClipPlane = 0.3f;
             cam.farClipPlane = 60f;
             cam.backgroundColor = new Color(0.18f, 0.22f, 0.45f);

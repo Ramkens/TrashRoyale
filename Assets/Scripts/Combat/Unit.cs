@@ -157,12 +157,53 @@ namespace TrashRoyale.Combat
             AudioManager.PlayOneShot("attack_swing", transform.position);
             if (card.range > 1.6f)
             {
-                Projectile.Spawn(transform.position + Vector3.up * 0.6f, _target, card.damage, team);
+                if (card.id == "nyancat")
+                {
+                    // Nyan cat shoots an instant rainbow beam at the target.
+                    FxFactory.SpawnRainbowBeam(transform.position + Vector3.up * 0.6f, _target.AimPos);
+                    _target.TakeDamage(card.damage, this);
+                }
+                else
+                {
+                    Projectile.Spawn(transform.position + Vector3.up * 0.6f, _target, card.damage, team);
+                }
             }
             else
             {
                 _target.TakeDamage(card.damage, this);
-                FxFactory.SpawnHit(_target.AimPos);
+                PlayThemedMelee(_target.AimPos);
+            }
+        }
+
+        void PlayThemedMelee(Vector3 hitPos)
+        {
+            switch (card.id)
+            {
+                case "knight":
+                case "gigachad":
+                    FxFactory.SpawnSwordSlash(transform.position + Vector3.up * 0.6f, hitPos);
+                    if (card.id == "gigachad") FxFactory.SpawnShockwave(hitPos, new Color(1f, 0.95f, 0.4f), 1.0f);
+                    break;
+                case "shrek":
+                    FxFactory.SpawnEarthquake(hitPos);
+                    break;
+                case "pig":
+                    FxFactory.SpawnStarPow(hitPos, new Color(1f, 0.55f, 0.7f));
+                    break;
+                case "cheems":
+                    FxFactory.SpawnStarPow(hitPos, new Color(1f, 0.85f, 0.4f));
+                    break;
+                case "amongus":
+                    FxFactory.SpawnStarPow(hitPos, new Color(0.95f, 0.3f, 0.3f));
+                    break;
+                case "skibidi":
+                case "pocoyo":
+                    FxFactory.SpawnMagicRing(hitPos, card.id == "skibidi"
+                        ? new Color(0.6f, 0.85f, 1f) : new Color(0.4f, 0.7f, 1f));
+                    break;
+                default:
+                    FxFactory.SpawnHit(hitPos);
+                    break;
             }
         }
 

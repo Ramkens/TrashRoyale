@@ -68,6 +68,22 @@ namespace TrashRoyale.Util
             return new Material(Sprite);
         }
 
+        /// <summary>
+        /// Translucent material for floor overlays / drag-preview rings. Uses the
+        /// sprite shader so it respects per-vertex alpha, and falls back gracefully
+        /// when Standard isn't available on Android.
+        /// </summary>
+        public static Material NewTransparentMaterial(Color color)
+        {
+            var m = new Material(Sprite);
+            if (m.HasProperty("_Color")) m.color = color;
+            else m.color = color;
+            // Sprites/Default already does proper alpha blending; no extra setup
+            // needed beyond color. The renderer also has to be set to no-cast
+            // shadows by the caller.
+            return m;
+        }
+
         public static Material NewTexturedOpaqueMaterial(Texture tex)
         {
             var m = new Material(Opaque);

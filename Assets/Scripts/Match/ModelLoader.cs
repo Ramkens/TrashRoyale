@@ -13,8 +13,66 @@ namespace TrashRoyale.Match
     /// </summary>
     public static class ModelLoader
     {
+        // Map card id -> prefab name in Resources/UnitPrefabs. Some cards use the
+        // sketchfab folder name verbatim (skibidi has the "_cameraman" suffix).
+        static readonly System.Collections.Generic.Dictionary<string, string> PrefabName = new()
+        {
+            { "knight",   "knight"   },
+            { "pig",      "pig"      },
+            { "skibidi",  "skibidi_cameraman" },
+            { "pocoyo",   "pocoyo"   },
+            { "amongus",  "amongus"  },
+            { "cheems",   "cheems"   },
+            { "shrek",    "shrek"    },
+            { "gigachad", "gigachad" },
+            { "nyancat",  "nyancat"  },
+        };
+
+        // Per-card uniform scale and Y offset to fit each model into our ~2u-tall
+        // arena character size. Tuned conservatively; can be overridden later.
+        static readonly System.Collections.Generic.Dictionary<string, (float scale, float yOffset)> Tune = new()
+        {
+            { "knight",   (1.6f, 0f) },
+            { "pig",      (1.4f, 0f) },
+            { "skibidi",  (1.7f, 0f) },
+            { "pocoyo",   (1.6f, 0f) },
+            { "amongus",  (1.4f, 0f) },
+            { "cheems",   (1.5f, 0f) },
+            { "shrek",    (1.6f, 0f) },
+            { "gigachad", (1.7f, 0f) },
+            { "nyancat",  (1.6f, 0f) },
+        };
+
         public static GameObject InstantiateUnit(CardData card)
         {
+            // 1) Try a real glTF-imported prefab. glTFast registers a ScriptedImporter
+            //    that produces a GameObject asset for each .gltf file under Assets/.
+            //    The .gltf files live under Assets/Resources/UnitGltf/<name>/scene.gltf
+            //    so they get loaded via Resources.Load<GameObject>("UnitGltf/<name>/scene").
+            if (PrefabName.TryGetValue(card.id, out var pname))
+            {
+                var prefab = Resources.Load<GameObject>("UnitGltf/" + pname + "/scene");
+                if (prefab == null)
+                    prefab = Resources.Load<GameObject>("UnitPrefabs/" + pname);
+                if (prefab != null)
+                {
+                    var inst = Object.Instantiate(prefab);
+                    inst.name = card.id;
+                    if (Tune.TryGetValue(card.id, out var tune))
+                    {
+                        inst.transform.localScale = Vector3.one * tune.scale;
+                        inst.transform.localPosition = new Vector3(0, tune.yOffset, 0);
+                    }
+                    foreach (var col in inst.GetComponentsInChildren<Collider>())
+                    {
+                        Object.Destroy(col);
+                    }
+                    return inst;
+                }
+            }
+
+            // 2) Fallback: build a chunky primitive character so a missing prefab
+            //    never crashes the game.
             var go = new GameObject(card.id);
             switch (card.id)
             {

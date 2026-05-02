@@ -17,8 +17,6 @@ namespace TrashRoyale.UI
         public int slotIndex;
         Image _bg;
         Image _art;
-        Image _costBubble;
-        Text _cost;
         CanvasGroup _slotCanvas;
         CardData _card;
         bool _affordable;
@@ -59,37 +57,7 @@ namespace TrashRoyale.UI
             artImg.preserveAspect = true;
             artImg.raycastTarget = false;
 
-            // Elixir cost bubble in top-left corner
-            var costBubble = new GameObject("CostBubble");
-            costBubble.transform.SetParent(go.transform, false);
-            var cbRt = costBubble.AddComponent<RectTransform>();
-            cbRt.anchorMin = new Vector2(0, 1);
-            cbRt.anchorMax = new Vector2(0, 1);
-            cbRt.pivot = new Vector2(0.5f, 0.5f);
-            cbRt.sizeDelta = new Vector2(72, 72);
-            cbRt.anchoredPosition = new Vector2(20, -20);
-            var cbImg = costBubble.AddComponent<Image>();
-            cbImg.color = new Color(0.85f, 0.3f, 0.95f);
-
-            var costText = new GameObject("CostText");
-            costText.transform.SetParent(costBubble.transform, false);
-            var ctRt = costText.AddComponent<RectTransform>();
-            ctRt.anchorMin = Vector2.zero;
-            ctRt.anchorMax = Vector2.one;
-            ctRt.offsetMin = ctRt.offsetMax = Vector2.zero;
-            var costTxt = costText.AddComponent<Text>();
-            costTxt.text = "?";
-            costTxt.alignment = TextAnchor.MiddleCenter;
-            costTxt.fontSize = 50;
-            costTxt.font = UIFactory.DefaultFont;
-            costTxt.color = Color.white;
-            costTxt.fontStyle = FontStyle.Bold;
-            costTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
-            costTxt.verticalOverflow = VerticalWrapMode.Overflow;
-            costTxt.raycastTarget = false;
-            var costOutline = costText.AddComponent<Outline>();
-            costOutline.effectColor = new Color(0, 0, 0, 0.9f);
-            costOutline.effectDistance = new Vector2(3, -3);
+            // No cost bubble overlay — the card art itself shows the elixir cost.
 
             var cg = go.AddComponent<CanvasGroup>();
             cg.blocksRaycasts = true;
@@ -99,8 +67,6 @@ namespace TrashRoyale.UI
             slot.slotIndex = idx;
             slot._bg = bg;
             slot._art = artImg;
-            slot._cost = costTxt;
-            slot._costBubble = cbImg;
             slot._slotCanvas = cg;
             return slot;
         }
@@ -111,14 +77,10 @@ namespace TrashRoyale.UI
             _affordable = affordable;
             if (card == null)
             {
-                _cost.text = "";
-                _costBubble.color = new Color(0.4f, 0.4f, 0.4f, 0.5f);
                 _art.sprite = null;
                 _art.color = new Color(0, 0, 0, 0);
                 return;
             }
-            _cost.text = card.elixirCost.ToString();
-            _costBubble.color = new Color(0.7f, 0.25f, 0.85f);
             var sprite = CardArtCache.Get(card.id);
             if (sprite != null)
             {

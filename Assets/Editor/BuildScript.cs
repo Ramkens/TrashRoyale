@@ -50,6 +50,14 @@ namespace TrashRoyale.EditorTools
             ApplyPlayerSettings();
             EnsureScenes();
 
+            // glTF models live in Assets/Resources/UnitGltf/<name>/scene.gltf and
+            // are imported automatically by glTFast's ScriptedImporter at asset
+            // database refresh time, so we don't need to bake them here. The
+            // batch importer (GltfImporter.ImportAll) is intentionally NOT called
+            // because synchronously waiting on glTFast's async pipeline deadlocks
+            // the editor. Run it manually from the menu only when needed.
+            AssetDatabase.Refresh();
+
             Directory.CreateDirectory(outDir);
             string apkPath = Path.Combine(outDir, "TrashRoyale.apk");
 
@@ -97,8 +105,8 @@ namespace TrashRoyale.EditorTools
             PlayerSettings.companyName = CompanyName;
             PlayerSettings.productName = ProductName;
             PlayerSettings.applicationIdentifier = PackageName;
-            PlayerSettings.bundleVersion = "0.7.0";
-            PlayerSettings.Android.bundleVersionCode = 7;
+            PlayerSettings.bundleVersion = "0.8.0";
+            PlayerSettings.Android.bundleVersionCode = 8;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;

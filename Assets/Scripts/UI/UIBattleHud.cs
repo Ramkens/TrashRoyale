@@ -21,6 +21,7 @@ namespace TrashRoyale.UI
         GameObject _dragGhost;
         Image _dragGhostArt;
         GameObject _placementHint;
+        PlacementOverlay _placement;
 
         public Camera arenaCamera;
         public bool placementMode { get; private set; }
@@ -219,40 +220,61 @@ namespace TrashRoyale.UI
         {
             placementMode = true;
             _draggingSlot = slot;
+            var match = MatchManager.I;
+            var card = match != null && match.PlayerDeck != null
+                ? match.PlayerDeck.Hand[slot] : null;
             if (_dragGhost != null && _cardSlots[slot] != null)
             {
                 _dragGhostArt.sprite = _cardSlots[slot].Art;
                 _dragGhostArt.color = Color.white;
                 _dragGhost.SetActive(true);
             }
+            if (_placement == null) _placement = PlacementOverlay.Create();
+            _placement.Show(card);
         }
 
         void DragMove(int slot, Vector2 screenPos)
         {
-            if (_dragGhost == null || !_dragGhost.activeSelf) return;
-            // Convert screen position to canvas anchored position.
-            var rt = _dragGhost.GetComponent<RectTransform>();
-            var canvasRt = _canvas.transform as RectTransform;
-            if (canvasRt == null) return;
-            Vector2 local;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                canvasRt, screenPos,
-                _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : arenaCamera,
-                out local);
-            rt.anchoredPosition = local;
+            if (_dragGhost != null && _dragGhost.activeSelf)
+            {
+                var rt = _dragGhost.GetComponent<RectTransform>();
+                var canvasRt = _canvas.transform as RectTransform;
+                if (canvasRt != null)
+                {
+                    Vector2 local;
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        canvasRt, screenPos,
+                        _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : arenaCamera,
+                        out local);
+                    rt.anchoredPosition = local;
+                }
+            }
+            // Move the world-space cursor ring to the touch position so the player
+            // sees exactly where the unit will spawn / spell will land.
+            if (_placement != null && arenaCamera != null)
+            {
+                var ray = arenaCamera.ScreenPointToRay(screenPos);
+                if (TryRaycastPlane(ray, out var worldPoint))
+                {
+                    var match = MatchManager.I;
+                    var card = match != null && match.PlayerDeck != null
+                        ? match.PlayerDeck.Hand[slot] : null;
+                    bool valid = ArenaController.I != null && card != null
+                        && ArenaController.I.IsValidPlacement(Team.Player, worldPoint, card);
+                    _placement.SetCursor(worldPoint, valid);
+                }
+            }
         }
 
         void EndDrag(int slot, Vector2 screenPos)
         {
             placementMode = false;
             if (_dragGhost != null) _dragGhost.SetActive(false);
+            if (_placement != null) _placement.Hide();
             if (_draggingSlot != slot) { _draggingSlot = -1; return; }
             _draggingSlot = -1;
             var match = MatchManager.I;
             if (match == null || arenaCamera == null) return;
-            // Use plane raycast first — works regardless of ground colliders, and is
-            // numerically stable. Physics.Raycast as a fallback in case the plane
-            // miss is somehow possible (it shouldn't, but be defensive).
             Vector3 worldPoint;
             var ray = arenaCamera.ScreenPointToRay(screenPos);
             if (!TryRaycastPlane(ray, out worldPoint))
@@ -261,13 +283,12 @@ namespace TrashRoyale.UI
                     worldPoint = hit.point;
                 else return;
             }
-            // Player can only deploy on his own half. If user dropped on the enemy
-            // half (z > 0) we just clamp to z = -0.6 so deployment still happens close
-            // to the bridge — this matches what most CR-style games do for forgiving
-            // drag UX.
-            if (worldPoint.z > -ArenaController.RiverHalfThickness - 0.4f)
-                worldPoint.z = -ArenaController.RiverHalfThickness - 0.4f;
+            // Don't auto-clamp into the player's own half: with broken enemy towers
+            // the deploy zone genuinely extends across the river, and clamping
+            // would make those drops fail. Bounds clamping for x is still helpful
+            // so the unit doesn't end up sliding off the side.
             worldPoint.x = Mathf.Clamp(worldPoint.x, -ArenaController.HalfWidth + 0.3f, ArenaController.HalfWidth - 0.3f);
+            worldPoint.z = Mathf.Clamp(worldPoint.z, -ArenaController.HalfLength + 0.3f, ArenaController.HalfLength - 0.3f);
             match.TryDeployPlayer(slot, worldPoint);
         }
 
