@@ -14,6 +14,20 @@ namespace TrashRoyale.Persistence
         public string playerName = "Треш Рояль";
         public List<string> deck = new List<string> { "knight", "pig", "skibidi", "pocoyo", "amongus", "cheems", "nyancat", "fireball" };
 
+        // PR4: persisted achievement progress.
+        public List<string> unlockedAchievements = new List<string>();
+        // Hex color (#RRGGBB) for the player banner. Awarded by certain
+        // tier achievements; empty falls back to the default blue.
+        public string bannerColorHex = "";
+        // Display preference: which medal/icon to show next to the
+        // player name in the menu banner. Defaults to highest-tier
+        // unlocked medal — but the user can pin a specific one via the
+        // achievements popup.
+        public string pinnedMedalKind = "";
+        // Lifetime totals — useful for additional achievements down the
+        // road (e.g. crowns scored across all matches).
+        public int totalCrownsScored = 0;
+
         public static PlayerProfile Load()
         {
             var json = PlayerPrefs.GetString("trashroyale.profile", "");

@@ -97,7 +97,14 @@ namespace TrashRoyale.Bootstrap
             brt.anchorMax = new Vector2(0.96f, 0.97f);
             brt.offsetMin = brt.offsetMax = Vector2.zero;
             var btnSp = UIFactory.LoadSprite("UI/btn_gold");
-            if (btnSp != null) { banner.sprite = btnSp; banner.type = Image.Type.Sliced; banner.color = new Color(0.25f, 0.45f, 0.85f, 1f); }
+            // Banner color = unlocked-banner reward (PR4) or default blue.
+            Color bannerColor = new Color(0.25f, 0.45f, 0.85f, 1f);
+            if (!string.IsNullOrEmpty(_profile.bannerColorHex) &&
+                ColorUtility.TryParseHtmlString(_profile.bannerColorHex, out var c))
+            {
+                bannerColor = c;
+            }
+            if (btnSp != null) { banner.sprite = btnSp; banner.type = Image.Type.Sliced; banner.color = bannerColor; }
 
             // Click whole banner to edit nick
             var bannerBtn = banner.gameObject.AddComponent<Button>();
@@ -107,6 +114,10 @@ namespace TrashRoyale.Bootstrap
                 AudioManager.PlaySfx("click");
                 NicknamePopup.Open(_canvas.transform, _profile, RefreshBanner);
             });
+
+            // Medals strip — small icons of unlocked achievements,
+            // tucked between the name and trophy count.
+            BuildMedalsStrip(banner.transform);
 
             // Player name (tap banner to edit)
             _playerNameText = UIFactory.MakeText(banner.transform, "Name", _profile.playerName, 50, TextAnchor.MiddleLeft);
@@ -145,6 +156,44 @@ namespace TrashRoyale.Bootstrap
             if (_playerNameText != null) _playerNameText.text = _profile.playerName;
             if (_trophiesText != null) _trophiesText.text = _profile.trophies.ToString();
             if (_tierText != null) _tierText.text = BotLadder.TierName(_profile.trophies);
+        }
+
+        // Show up to 4 medal icons next to the player name. Tap opens
+        // the AchievementsPopup with the full grid + lock states.
+        void BuildMedalsStrip(Transform parent)
+        {
+            var strip = UIFactory.MakePanel(parent, "MedalsStrip", new Color(0, 0, 0, 0.0f));
+            strip.raycastTarget = true;
+            var srt = strip.GetComponent<RectTransform>();
+            srt.anchorMin = new Vector2(0.34f, 0.1f);
+            srt.anchorMax = new Vector2(0.62f, 0.95f);
+            srt.offsetMin = srt.offsetMax = Vector2.zero;
+
+            // Find unlocked, in catalog order. Cap at 4 for the strip.
+            var unlocked = _profile.unlockedAchievements ?? new System.Collections.Generic.List<string>();
+            int shown = 0;
+            for (int i = 0; i < Achievements.All.Length && shown < 4; i++)
+            {
+                var def = Achievements.All[i];
+                if (!unlocked.Contains(def.kind.ToString())) continue;
+                var iconImg = UIFactory.MakeIcon(strip.transform, "Medal_" + def.kind,
+                    "Icons/" + def.medalIconKey, new Vector2(60, 60));
+                iconImg.color = def.medalColor;
+                var irt = iconImg.GetComponent<RectTransform>();
+                float w = 1f / 4f;
+                irt.anchorMin = new Vector2(shown * w + 0.02f, 0.15f);
+                irt.anchorMax = new Vector2((shown + 1) * w - 0.02f, 0.85f);
+                irt.offsetMin = irt.offsetMax = Vector2.zero;
+                shown++;
+            }
+
+            var stripBtn = strip.gameObject.AddComponent<Button>();
+            stripBtn.targetGraphic = strip;
+            stripBtn.onClick.AddListener(() =>
+            {
+                AudioManager.PlaySfx("click");
+                AchievementsPopup.Open(_canvas.transform, _profile);
+            });
         }
 
         void BuildTitle()

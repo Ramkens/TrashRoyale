@@ -225,7 +225,11 @@ namespace TrashRoyale.Bootstrap
         {
             AudioManager.StopMusic();
             var profile = PlayerProfile.Load();
-            if (winner == Team.Player)
+            var match = MatchManager.I;
+            int playerCrowns = match != null ? match.PlayerCrowns : 0;
+            int enemyCrowns = match != null ? match.EnemyCrowns : 0;
+            bool won = winner == Team.Player;
+            if (won)
             {
                 profile.RecordWin(isPvE ? trophyDelta : 0);
                 AudioManager.PlayOneShot("victory", Vector3.zero);
@@ -236,6 +240,22 @@ namespace TrashRoyale.Bootstrap
                 profile.RecordLoss(isPvE ? trophyDelta : 0);
                 AudioManager.PlayOneShot("defeat", Vector3.zero);
                 _hud.ShowEndScreen("ПОРАЖЕНИЕ");
+            }
+            profile.totalCrownsScored += playerCrowns;
+            var stats = new MatchResultStats
+            {
+                wonMatch = won,
+                playerCrowns = playerCrowns,
+                enemyCrowns = enemyCrowns,
+                wasPvE = isPvE,
+                trophiesAfter = profile.trophies,
+                winsAfter = profile.wins,
+                lossesAfter = profile.losses,
+            };
+            var newly = Achievements.EvaluateAfterMatch(profile, stats);
+            if (newly.Count > 0)
+            {
+                AchievementToast.ShowQueue(newly);
             }
         }
     }
