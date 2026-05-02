@@ -15,6 +15,11 @@ namespace TrashRoyale.Bootstrap
             public int trophyDelta = 30;
             public string netRoomCode;
             public bool netHost;
+            // Visual identity for the opponent shown in the match-start
+            // banner reveal. Defaults are sane fallbacks when the bot
+            // ladder doesn't supply them (e.g. legacy callers).
+            public Color botBannerColor = new Color(0.6f, 0.35f, 0.85f);
+            public string botIconKey = "fist";
         }
         public static Request Pending;
 

@@ -21,7 +21,11 @@ namespace TrashRoyale.Match
         public float DoubleElixirAt = 60f;
         public float TripleElixirAt = 30f;
         public float TimeRemaining { get; private set; }
-        public float CountdownRemaining { get; private set; } = 3f;
+        // Extended from 3s to 5s in PR3 to fit the CR-style banner-reveal
+        // intro animation. Last 3 seconds are still the big "3..2..1.. GO!"
+        // countdown — the first 2 seconds slide in player + opponent banners.
+        public const float CountdownTotal = 5f;
+        public float CountdownRemaining { get; private set; } = CountdownTotal;
 
         public Tower PlayerKing, EnemyKing;
         public List<Tower> PlayerSideTowers { get; } = new List<Tower>();
@@ -51,7 +55,7 @@ namespace TrashRoyale.Match
             EnemyDeck = new Deck(enemyDeck);
             IsLocalPvE = pve;
             Phase = MatchPhase.Countdown;
-            CountdownRemaining = 3f;
+            CountdownRemaining = CountdownTotal;
             TimeRemaining = MatchDurationSeconds;
             PlayerCrowns = 0;
             EnemyCrowns = 0;

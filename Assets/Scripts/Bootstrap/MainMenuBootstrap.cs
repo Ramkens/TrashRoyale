@@ -277,6 +277,8 @@ namespace TrashRoyale.Bootstrap
                 enemyDeck = bot.deck,
                 botName = bot.name,
                 botDifficulty = bot.difficulty,
+                botBannerColor = bot.bannerColor,
+                botIconKey = bot.iconKey,
                 trophyDelta = 30
             };
             SceneManager.LoadScene("Battle");

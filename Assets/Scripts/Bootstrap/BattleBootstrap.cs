@@ -53,6 +53,10 @@ namespace TrashRoyale.Bootstrap
                 match.OnMatchEnded += OnMatchEnded;
                 BuildBackButton();
 
+                // CR-style banner reveal during the countdown.
+                var intro = MatchIntroOverlay.Build();
+                intro.StartIntro();
+
                 if (isPvE)
                 {
                     _bot = matchGo.AddComponent<BotController>();

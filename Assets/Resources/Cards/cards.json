@@ -309,7 +309,7 @@
       "splashRadius": 1.4,
       "modelKey": "bomber",
       "modelScale": 1.0,
-      "voiceLine": "boom"
+      "voiceLine": "fireball_boom"
     },
     {
       "id": "doge_mage",
@@ -331,7 +331,7 @@
       "splashRadius": 1.4,
       "modelKey": "doge_mage",
       "modelScale": 1.0,
-      "voiceLine": "wow"
+      "voiceLine": "sigma"
     }
   ]
 }
