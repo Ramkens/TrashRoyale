@@ -269,8 +269,12 @@ namespace TrashRoyale.Combat
             var arc = go.AddComponent<MissileArc>();
             arc.start = from;
             arc.end = target;
-            arc.duration = 0.65f;
-            arc.peakHeight = 2.2f;
+            // Tie flight time + arc height to distance so a fireball thrown
+            // from the far king tower still has a visible parabola, while a
+            // close shot doesn't crawl through the air.
+            float dist = Vector3.Distance(from, target);
+            arc.duration = Mathf.Clamp(dist / 14f, 0.45f, 1.1f);
+            arc.peakHeight = Mathf.Clamp(dist * 0.18f, 1.5f, 3.5f);
             arc.onImpact = () =>
             {
                 SpawnExplosion(target, radius);

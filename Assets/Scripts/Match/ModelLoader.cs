@@ -6,16 +6,24 @@ using TrashRoyale.Util;
 namespace TrashRoyale.Match
 {
     /// <summary>
-    /// Builds chunky 3D character models out of Unity primitives. Each card has
-    /// its own silhouette (knight = silver capsule + helmet, pig = pink box with
-    /// snout, skibidi = toilet + head etc.) so they're distinguishable from each
-    /// other without needing huge glTF imports.
+    /// Spawns 3D character models for cards. Tries the imported glTF prefab
+    /// from Resources/UnitGltf/&lt;name&gt;/scene first; if that's missing it
+    /// falls back to a chunky primitive built out of Unity capsules/spheres so
+    /// a missing model never crashes the match.
+    ///
+    /// Sketchfab models come in wildly different native scales (some are 1cm
+    /// tall, others 15m tall) and orientations (Y-up vs Z-up). To keep every
+    /// unit roughly the same on-arena size we measure the combined renderer
+    /// bounds at runtime and uniformly scale to <see cref="TargetHeight"/>,
+    /// then shift by Y so the feet sit on the ground. Per-card overrides in
+    /// <see cref="OrientationOverride"/> rotate the source model when the
+    /// glTF was authored lying on its side or facing the wrong way.
     /// </summary>
     public static class ModelLoader
     {
-        // Map card id -> prefab name in Resources/UnitPrefabs. Some cards use the
-        // sketchfab folder name verbatim (skibidi has the "_cameraman" suffix).
-        static readonly System.Collections.Generic.Dictionary<string, string> PrefabName = new()
+        // Map card id -> prefab name in Resources/UnitGltf. Some folders use
+        // the sketchfab-suffixed name (skibidi_cameraman).
+        static readonly Dictionary<string, string> PrefabName = new()
         {
             { "knight",   "knight"   },
             { "pig",      "pig"      },
@@ -28,27 +36,45 @@ namespace TrashRoyale.Match
             { "nyancat",  "nyancat"  },
         };
 
-        // Per-card uniform scale and Y offset to fit each model into our ~2u-tall
-        // arena character size. Tuned conservatively; can be overridden later.
-        static readonly System.Collections.Generic.Dictionary<string, (float scale, float yOffset)> Tune = new()
+        // Target world-space height in arena units (~meters). Towers are ~3.2u
+        // tall and the arena is 16u long, so 1.8u puts every fighter well
+        // below tower height while staying readable from the CR-style camera.
+        const float TargetHeight = 1.8f;
+
+        // Per-card orientation correction applied BEFORE measuring bounds.
+        // Sketchfab models authored Z-up or facing -Z look like they're lying
+        // on their belly in Unity (Y-up, +Z forward); rotating fixes that.
+        static readonly Dictionary<string, Quaternion> OrientationOverride = new()
         {
-            { "knight",   (1.6f, 0f) },
-            { "pig",      (1.4f, 0f) },
-            { "skibidi",  (1.7f, 0f) },
-            { "pocoyo",   (1.6f, 0f) },
-            { "amongus",  (1.4f, 0f) },
-            { "cheems",   (1.5f, 0f) },
-            { "shrek",    (1.6f, 0f) },
-            { "gigachad", (1.7f, 0f) },
-            { "nyancat",  (1.6f, 0f) },
+            { "pig",     Quaternion.Euler(-90f, 0f, 0f) },
+            { "pocoyo",  Quaternion.Euler(-90f, 0f, 0f) },
+            { "shrek",   Quaternion.Euler(-90f, 0f, 0f) },
+        };
+
+        // Per-card additional fudge multiplier on top of auto-fit (e.g. tank
+        // units a touch taller than swarm). Defaults to 1.0 if not listed.
+        static readonly Dictionary<string, float> SizeMultiplier = new()
+        {
+            { "shrek",    1.25f },  // shrek is a big ogre
+            { "gigachad", 1.20f },  // gigachad is buff
+            { "amongus",  0.85f },  // imposters are smaller
+            { "cheems",   0.9f  },
         };
 
         public static GameObject InstantiateUnit(CardData card)
         {
-            // 1) Try a real glTF-imported prefab. glTFast registers a ScriptedImporter
-            //    that produces a GameObject asset for each .gltf file under Assets/.
-            //    The .gltf files live under Assets/Resources/UnitGltf/<name>/scene.gltf
-            //    so they get loaded via Resources.Load<GameObject>("UnitGltf/<name>/scene").
+            // 1) Special-case Nyan Cat: it's a flat 2D meme — even the glTF
+            //    is a single-side plane that disappears from one half of the
+            //    arena. Always render Nyan Cat as a two-sided billboard so it
+            //    looks correct from both teams' camera angles.
+            if (card.id == "nyancat")
+            {
+                return BuildNyanCatBillboard(card);
+            }
+
+            // 2) Try a real glTF-imported prefab. glTFast registers a
+            //    ScriptedImporter that produces a GameObject for every
+            //    .gltf under Assets/, so Resources.Load picks it up.
             if (PrefabName.TryGetValue(card.id, out var pname))
             {
                 var prefab = Resources.Load<GameObject>("UnitGltf/" + pname + "/scene");
@@ -56,23 +82,11 @@ namespace TrashRoyale.Match
                     prefab = Resources.Load<GameObject>("UnitPrefabs/" + pname);
                 if (prefab != null)
                 {
-                    var inst = Object.Instantiate(prefab);
-                    inst.name = card.id;
-                    if (Tune.TryGetValue(card.id, out var tune))
-                    {
-                        inst.transform.localScale = Vector3.one * tune.scale;
-                        inst.transform.localPosition = new Vector3(0, tune.yOffset, 0);
-                    }
-                    foreach (var col in inst.GetComponentsInChildren<Collider>())
-                    {
-                        Object.Destroy(col);
-                    }
-                    return inst;
+                    return BuildFromPrefab(card, prefab);
                 }
             }
 
-            // 2) Fallback: build a chunky primitive character so a missing prefab
-            //    never crashes the game.
+            // 3) Fallback: chunky primitives so a missing prefab doesn't crash.
             var go = new GameObject(card.id);
             switch (card.id)
             {
@@ -90,7 +104,129 @@ namespace TrashRoyale.Match
             return go;
         }
 
-        // ---------- Builders ----------
+        // ---------- glTF prefab post-processing ----------
+
+        /// <summary>
+        /// Wraps the imported model in an outer GameObject so we can rotate
+        /// the model child without touching the unit-control transform, then
+        /// uniformly scales to <see cref="TargetHeight"/> and lifts to the
+        /// floor. This fixes "model is huge / tiny / lying down" complaints
+        /// uniformly without per-card hardcoded magic numbers.
+        /// </summary>
+        static GameObject BuildFromPrefab(CardData card, GameObject prefab)
+        {
+            var root = new GameObject(card.id);
+            var inst = Object.Instantiate(prefab, root.transform);
+            inst.name = "Model";
+
+            // Strip imported colliders so navigation/aim raycasts ignore them.
+            foreach (var col in inst.GetComponentsInChildren<Collider>())
+            {
+                Object.Destroy(col);
+            }
+
+            // 1) Per-card orientation correction so Z-up source models stand
+            //    up. Applied to the model child; the outer root keeps a clean
+            //    transform that Unit/Tower can rotate to face targets.
+            if (OrientationOverride.TryGetValue(card.id, out var rot))
+            {
+                inst.transform.localRotation = rot;
+            }
+
+            // 2) Compute combined renderer bounds AFTER rotation so the auto-
+            //    fit scale is computed against the *visible* upright model.
+            var bounds = ComputeWorldBounds(inst);
+            float h = Mathf.Max(0.001f, bounds.size.y);
+            float mult = SizeMultiplier.TryGetValue(card.id, out var m) ? m : 1f;
+            float cardScale = card.modelScale > 0f ? card.modelScale : 1f;
+            float uniformScale = (TargetHeight / h) * mult * cardScale;
+            inst.transform.localScale = Vector3.one * uniformScale;
+
+            // 3) Drop the model so its lowest renderer point sits at y=0.
+            //    Recompute bounds after scaling for accuracy.
+            var scaledBounds = ComputeWorldBounds(inst);
+            float feetOffset = -(scaledBounds.min.y - root.transform.position.y);
+            inst.transform.localPosition = new Vector3(0f, feetOffset, 0f);
+
+            return root;
+        }
+
+        /// <summary>
+        /// Combined world-space AABB of every Renderer under <paramref name="go"/>.
+        /// Returns a zero-size box at the origin if there are no renderers, so
+        /// callers can divide safely.
+        /// </summary>
+        static Bounds ComputeWorldBounds(GameObject go)
+        {
+            var renderers = go.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                return new Bounds(go.transform.position, Vector3.one * 0.001f);
+            }
+            var b = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                b.Encapsulate(renderers[i].bounds);
+            }
+            return b;
+        }
+
+        /// <summary>
+        /// Two back-to-back textured quads showing CardArt/nyancat. Replaces
+        /// the literally-flat glTF, which read as a single-side 2D plane and
+        /// disappeared when viewed from the other lane. Includes a bobbing
+        /// rainbow trail so it still looks like Nyan Cat in motion.
+        /// </summary>
+        static GameObject BuildNyanCatBillboard(CardData card)
+        {
+            var root = new GameObject(card.id);
+            var sprite = Resources.Load<Texture2D>("CardArt/nyancat");
+
+            // Two quads facing opposite directions so we can see Nyan Cat from
+            // both halves of the arena without relying on a two-sided shader.
+            BuildBillboardQuad(root.transform, sprite, 0f);
+            BuildBillboardQuad(root.transform, sprite, 180f);
+
+            // Rainbow trail floating behind the cat regardless of facing.
+            var trailGo = new GameObject("RainbowTrail");
+            trailGo.transform.SetParent(root.transform, false);
+            trailGo.transform.localPosition = new Vector3(0f, 1.0f, -0.4f);
+            Color[] rainbow = {
+                new Color(1f, 0.2f, 0.2f),
+                new Color(1f, 0.6f, 0.2f),
+                new Color(1f, 1f, 0.2f),
+                new Color(0.2f, 1f, 0.3f),
+                new Color(0.3f, 0.6f, 1f),
+                new Color(0.6f, 0.3f, 1f),
+            };
+            for (int i = 0; i < rainbow.Length; i++)
+            {
+                Cube(trailGo, rainbow[i], new Vector3(0.5f, 0.08f, 0.4f),
+                    new Vector3(0f, 0.05f * (i - rainbow.Length * 0.5f), -0.3f * i));
+            }
+
+            return root;
+        }
+
+        /// <summary>One textured quad sized 1.6m tall, 2.4m wide, lifted 1m off the ground.</summary>
+        static void BuildBillboardQuad(Transform parent, Texture2D tex, float yawDeg)
+        {
+            var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            q.name = "Billboard_" + Mathf.RoundToInt(yawDeg);
+            q.transform.SetParent(parent, false);
+            q.transform.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
+            q.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+            q.transform.localScale = new Vector3(2.4f, 1.6f, 1f);
+            Object.DestroyImmediate(q.GetComponent<Collider>());
+            var mat = tex != null
+                ? SafeShader.NewTexturedSpriteMaterial(tex)
+                : SafeShader.NewSpriteMaterial();
+            // Sprite shader respects per-vertex alpha so the texture's
+            // transparent edges blend cleanly against the arena.
+            q.GetComponent<MeshRenderer>().sharedMaterial = mat;
+        }
+
+        // ---------- Primitive fallback builders ----------
 
         static void BuildKnight(GameObject go)
         {
@@ -98,7 +234,7 @@ namespace TrashRoyale.Match
             Body(go, new Color(0.85f, 0.85f, 0.9f), 0.85f);
             Head(go, new Color(0.7f, 0.7f, 0.75f), 1.55f, 0.55f);
             // Sword
-            var sword = Cube(go, new Color(0.6f, 0.6f, 0.7f), new Vector3(0.12f, 0.7f, 0.12f),
+            Cube(go, new Color(0.6f, 0.6f, 0.7f), new Vector3(0.12f, 0.7f, 0.12f),
                 new Vector3(0.45f, 0.95f, 0.0f));
             // Cape
             Cube(go, new Color(0.85f, 0.2f, 0.25f), new Vector3(0.7f, 0.7f, 0.05f),
@@ -283,7 +419,7 @@ namespace TrashRoyale.Match
             Head(go, colors[idx], 1.55f, 0.55f);
         }
 
-        // ---------- Helpers ----------
+        // ---------- Primitive helpers ----------
 
         static void Body(GameObject parent, Color c, float h, float w = 0.7f)
         {
