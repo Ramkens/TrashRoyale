@@ -2,7 +2,6 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using TMPro;
 using TrashRoyale.Core;
 
 namespace TrashRoyale.UI
@@ -12,8 +11,8 @@ namespace TrashRoyale.UI
         public int slotIndex;
         Image _bg;
         Image _art;
-        TMP_Text _name;
-        TMP_Text _cost;
+        Text _name;
+        Text _cost;
         Image _costBubble;
         CardData _card;
         bool _affordable;
@@ -65,10 +64,19 @@ namespace TrashRoyale.UI
             ctRt.anchorMin = Vector2.zero;
             ctRt.anchorMax = Vector2.one;
             ctRt.offsetMin = ctRt.offsetMax = Vector2.zero;
-            var costTxt = costText.AddComponent<TextMeshProUGUI>();
+            var costTxt = costText.AddComponent<Text>();
             costTxt.text = "?";
-            costTxt.alignment = TextAlignmentOptions.Center;
+            costTxt.alignment = TextAnchor.MiddleCenter;
             costTxt.fontSize = 44;
+            costTxt.font = UIFactory.DefaultFont;
+            costTxt.color = Color.white;
+            costTxt.fontStyle = FontStyle.Bold;
+            costTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
+            costTxt.verticalOverflow = VerticalWrapMode.Overflow;
+            costTxt.raycastTarget = false;
+            var costOutline = costText.AddComponent<Outline>();
+            costOutline.effectColor = new Color(0, 0, 0, 0.85f);
+            costOutline.effectDistance = new Vector2(2, -2);
 
             var name = new GameObject("Name");
             name.transform.SetParent(go.transform, false);
@@ -76,10 +84,18 @@ namespace TrashRoyale.UI
             nrt.anchorMin = new Vector2(0, 0);
             nrt.anchorMax = new Vector2(1, 0.18f);
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
-            var nameTxt = name.AddComponent<TextMeshProUGUI>();
-            nameTxt.alignment = TextAlignmentOptions.Center;
+            var nameTxt = name.AddComponent<Text>();
+            nameTxt.alignment = TextAnchor.MiddleCenter;
             nameTxt.fontSize = 28;
             nameTxt.color = Color.white;
+            nameTxt.font = UIFactory.DefaultFont;
+            nameTxt.fontStyle = FontStyle.Bold;
+            nameTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
+            nameTxt.verticalOverflow = VerticalWrapMode.Overflow;
+            nameTxt.raycastTarget = false;
+            var nameOutline = name.AddComponent<Outline>();
+            nameOutline.effectColor = new Color(0, 0, 0, 0.85f);
+            nameOutline.effectDistance = new Vector2(2, -2);
 
             var slot = go.AddComponent<UICardSlot>();
             slot.slotIndex = idx;

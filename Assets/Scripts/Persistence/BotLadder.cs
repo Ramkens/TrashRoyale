@@ -43,5 +43,18 @@ namespace TrashRoyale.Persistence
             }
             return best;
         }
+
+        public static string TierName(int trophies)
+        {
+            if (trophies < 200) return "Свалка";
+            if (trophies < 500) return "Помойная Арена";
+            if (trophies < 800) return "Арена Свинарника";
+            if (trophies < 1200) return "Помойный Зал";
+            if (trophies < 1600) return "Скибиди-Арена";
+            if (trophies < 2000) return "Гига-Лига";
+            if (trophies < 2500) return "Чад Лига";
+            if (trophies < 3000) return "Король Помойки";
+            return "Легенда Свалки";
+        }
     }
 }

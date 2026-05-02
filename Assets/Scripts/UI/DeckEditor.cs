@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using TrashRoyale.Core;
 using TrashRoyale.Persistence;
 
@@ -13,7 +12,7 @@ namespace TrashRoyale.UI
         Transform _slotsRoot;
         Transform _gridRoot;
         Image[] _slotImages = new Image[8];
-        TMP_Text[] _slotNames = new TMP_Text[8];
+        Text[] _slotNames = new Text[8];
 
         public static DeckEditor Open(Transform canvas, PlayerProfile profile)
         {
@@ -35,7 +34,7 @@ namespace TrashRoyale.UI
         void Build()
         {
             CardDatabase.EnsureLoaded();
-            var title = UIFactory.MakeText(transform, "Title", "Колода", 70, TextAlignmentOptions.Center);
+            var title = UIFactory.MakeText(transform, "Title", "Колода", 70, TextAnchor.MiddleCenter);
             var trt = title.GetComponent<RectTransform>();
             trt.anchorMin = new Vector2(0, 0.92f);
             trt.anchorMax = new Vector2(1, 0.98f);
@@ -55,7 +54,7 @@ namespace TrashRoyale.UI
                 int idx = i;
                 var slot = MakeSlotChip(_slotsRoot, i, card, () => RemoveAtSlot(idx));
                 _slotImages[i] = slot.GetComponent<Image>();
-                _slotNames[i] = slot.transform.GetChild(0).GetComponent<TMP_Text>();
+                _slotNames[i] = slot.transform.GetChild(0).GetComponent<Text>();
             }
 
             var libPanel = UIFactory.MakePanel(transform, "Library", new Color(0.05f, 0.05f, 0.1f, 0.95f));
@@ -119,7 +118,7 @@ namespace TrashRoyale.UI
             var img = go.AddComponent<Image>();
             img.color = new Color(0.85f, 0.7f, 0.4f);
 
-            var t = UIFactory.MakeText(go.transform, "Name", c != null ? $"{c.displayName}\n{c.elixirCost}⚡" : "Пусто", 26, TextAlignmentOptions.Center);
+            var t = UIFactory.MakeText(go.transform, "Name", c != null ? $"{c.displayName}\n{c.elixirCost} эл" : "Пусто", 26, TextAnchor.MiddleCenter);
             var tr = t.GetComponent<RectTransform>();
             tr.anchorMin = Vector2.zero;
             tr.anchorMax = Vector2.one;
@@ -136,7 +135,7 @@ namespace TrashRoyale.UI
             go.transform.SetParent(parent, false);
             var img = go.AddComponent<Image>();
             img.color = _profile.deck.Contains(c.id) ? new Color(0.4f, 0.4f, 0.5f) : new Color(0.85f, 0.7f, 0.4f);
-            var t = UIFactory.MakeText(go.transform, "Name", $"{c.displayName}\n{c.elixirCost}⚡ • {c.kind}", 22, TextAlignmentOptions.Center);
+            var t = UIFactory.MakeText(go.transform, "Name", $"{c.displayName}\n{c.elixirCost} эл • {c.kind}", 22, TextAnchor.MiddleCenter);
             var tr = t.GetComponent<RectTransform>();
             tr.anchorMin = Vector2.zero;
             tr.anchorMax = Vector2.one;
@@ -166,7 +165,7 @@ namespace TrashRoyale.UI
             for (int i = 0; i < 8; i++)
             {
                 var c = i < _profile.deck.Count ? CardDatabase.Get(_profile.deck[i]) : null;
-                _slotNames[i].text = c != null ? $"{c.displayName}\n{c.elixirCost}⚡" : "Пусто";
+                _slotNames[i].text = c != null ? $"{c.displayName}\n{c.elixirCost} эл" : "Пусто";
             }
             Destroy(gameObject);
             DeckEditor.Open(transform.parent, _profile);

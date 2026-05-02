@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using TrashRoyale.Core;
 using TrashRoyale.Match;
 using TrashRoyale.Combat;
@@ -10,15 +9,15 @@ namespace TrashRoyale.UI
     public class UIBattleHud : MonoBehaviour
     {
         Slider _elixirBar;
-        TMP_Text _elixirText;
-        TMP_Text _timerText;
-        TMP_Text _crownsText;
-        TMP_Text _phaseText;
+        Text _elixirText;
+        Text _timerText;
+        Text _crownsText;
+        Text _phaseText;
         UICardSlot[] _cardSlots = new UICardSlot[4];
         UINextCard _nextCard;
         Canvas _canvas;
         GameObject _endScreen;
-        TMP_Text _endText;
+        Text _endText;
 
         public Camera arenaCamera;
         public bool placementMode { get; private set; }
@@ -53,21 +52,21 @@ namespace TrashRoyale.UI
             trt.sizeDelta = new Vector2(0, 120);
             trt.anchoredPosition = Vector2.zero;
 
-            _timerText = UIFactory.MakeText(topBar.transform, "Timer", "3:00", 56, TextAlignmentOptions.Center);
+            _timerText = UIFactory.MakeText(topBar.transform, "Timer", "3:00", 56, TextAnchor.MiddleCenter);
             var rtTimer = _timerText.GetComponent<RectTransform>();
             rtTimer.anchorMin = new Vector2(0.5f, 0.5f);
             rtTimer.anchorMax = new Vector2(0.5f, 0.5f);
             rtTimer.sizeDelta = new Vector2(220, 70);
             rtTimer.anchoredPosition = Vector2.zero;
 
-            _crownsText = UIFactory.MakeText(topBar.transform, "Crowns", "0 - 0", 36, TextAlignmentOptions.Center);
+            _crownsText = UIFactory.MakeText(topBar.transform, "Crowns", "0 - 0", 36, TextAnchor.MiddleCenter);
             var rtCrowns = _crownsText.GetComponent<RectTransform>();
             rtCrowns.anchorMin = new Vector2(0.5f, 0.5f);
             rtCrowns.anchorMax = new Vector2(0.5f, 0.5f);
             rtCrowns.sizeDelta = new Vector2(280, 50);
             rtCrowns.anchoredPosition = new Vector2(0, -50);
 
-            _phaseText = UIFactory.MakeText(transform, "Phase", "", 32, TextAlignmentOptions.Center);
+            _phaseText = UIFactory.MakeText(transform, "Phase", "", 32, TextAnchor.MiddleCenter);
             var rtPhase = _phaseText.GetComponent<RectTransform>();
             rtPhase.anchorMin = new Vector2(0.5f, 1f);
             rtPhase.anchorMax = new Vector2(0.5f, 1f);
@@ -98,7 +97,7 @@ namespace TrashRoyale.UI
             srt.offsetMin = new Vector2(8, 6);
             srt.offsetMax = new Vector2(-100, -6);
 
-            _elixirText = UIFactory.MakeText(elixirRow.transform, "ElixirNum", "5", 36, TextAlignmentOptions.Center);
+            _elixirText = UIFactory.MakeText(elixirRow.transform, "ElixirNum", "5", 36, TextAnchor.MiddleCenter);
             var etrt = _elixirText.GetComponent<RectTransform>();
             etrt.anchorMin = new Vector2(1, 0);
             etrt.anchorMax = new Vector2(1, 1);
@@ -199,7 +198,7 @@ namespace TrashRoyale.UI
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
-            _endText = UIFactory.MakeText(_endScreen.transform, "End", msg, 80, TextAlignmentOptions.Center);
+            _endText = UIFactory.MakeText(_endScreen.transform, "End", msg, 80, TextAnchor.MiddleCenter);
             var trt = _endText.GetComponent<RectTransform>();
             trt.anchorMin = new Vector2(0.1f, 0.55f);
             trt.anchorMax = new Vector2(0.9f, 0.85f);

@@ -63,5 +63,10 @@ namespace TrashRoyale.Audio
             if (!I._clips.TryGetValue(id, out var clip)) return;
             I._sfxSource.PlayOneShot(clip, I.SfxVolume);
         }
+
+        public static void PlaySfx(string id)
+        {
+            PlayOneShot(id, Vector3.zero);
+        }
     }
 }

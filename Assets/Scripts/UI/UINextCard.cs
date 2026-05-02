@@ -1,13 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using TrashRoyale.Core;
 
 namespace TrashRoyale.UI
 {
     public class UINextCard : MonoBehaviour
     {
-        TMP_Text _name;
+        Text _name;
         Image _bg;
 
         public static UINextCard Build(Transform parent)
@@ -23,28 +22,18 @@ namespace TrashRoyale.UI
             var img = go.AddComponent<Image>();
             img.color = new Color(0.5f, 0.4f, 0.3f, 0.8f);
 
-            var name = new GameObject("Name");
-            name.transform.SetParent(go.transform, false);
-            var nrt = name.AddComponent<RectTransform>();
+            var t = UIFactory.MakeText(go.transform, "Name", "—", 22, TextAnchor.MiddleCenter);
+            var nrt = t.GetComponent<RectTransform>();
             nrt.anchorMin = Vector2.zero;
             nrt.anchorMax = Vector2.one;
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
-            var t = name.AddComponent<TextMeshProUGUI>();
-            t.alignment = TextAlignmentOptions.Center;
-            t.fontSize = 22;
-            t.color = Color.white;
 
-            var lbl = new GameObject("Label");
-            lbl.transform.SetParent(go.transform, false);
-            var lrt = lbl.AddComponent<RectTransform>();
+            var lblText = UIFactory.MakeText(go.transform, "Label", "NEXT", 18, TextAnchor.MiddleCenter);
+            var lrt = lblText.GetComponent<RectTransform>();
             lrt.anchorMin = new Vector2(0, 1);
             lrt.anchorMax = new Vector2(1, 1);
             lrt.pivot = new Vector2(0.5f, 1f);
             lrt.sizeDelta = new Vector2(0, 28);
-            var lblText = lbl.AddComponent<TextMeshProUGUI>();
-            lblText.text = "NEXT";
-            lblText.alignment = TextAlignmentOptions.Center;
-            lblText.fontSize = 18;
             lblText.color = new Color(1f, 0.9f, 0.5f);
 
             var nx = go.AddComponent<UINextCard>();
@@ -55,7 +44,7 @@ namespace TrashRoyale.UI
 
         public void SetCard(CardData card)
         {
-            _name.text = card != null ? $"{card.displayName}\n{card.elixirCost}⚡" : "—";
+            _name.text = card != null ? $"{card.displayName}\n{card.elixirCost} эл" : "—";
         }
     }
 }
