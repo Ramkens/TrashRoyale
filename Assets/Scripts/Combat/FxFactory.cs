@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Combat
 {
@@ -24,7 +25,7 @@ namespace TrashRoyale.Combat
             shape.shapeType = ParticleSystemShapeType.Sphere;
             shape.radius = 0.05f;
             var rend = ps.GetComponent<ParticleSystemRenderer>();
-            rend.material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default"));
+            rend.material = SafeShader.NewSpriteMaterial();
         }
 
         public static void SpawnPoof(Vector3 pos)
@@ -43,7 +44,7 @@ namespace TrashRoyale.Combat
             var emission = ps.emission;
             emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 18) });
             var rend = ps.GetComponent<ParticleSystemRenderer>();
-            rend.material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default"));
+            rend.material = SafeShader.NewSpriteMaterial();
         }
 
         public static void SpawnExplosion(Vector3 pos, float radius)
@@ -65,7 +66,7 @@ namespace TrashRoyale.Combat
             shape.shapeType = ParticleSystemShapeType.Sphere;
             shape.radius = radius * 0.2f;
             var rend = ps.GetComponent<ParticleSystemRenderer>();
-            rend.material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default"));
+            rend.material = SafeShader.NewSpriteMaterial();
         }
     }
 }

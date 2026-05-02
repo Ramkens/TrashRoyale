@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Combat
 {
@@ -19,8 +20,7 @@ namespace TrashRoyale.Combat
             bg.transform.SetParent(root.transform, false);
             bg.transform.localScale = new Vector3(0.7f, 0.1f, 1f);
             DestroyImmediate(bg.GetComponent<Collider>());
-            var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            bgMat.color = new Color(0, 0, 0, 0.6f);
+            var bgMat = SafeShader.NewUnlitColorMaterial(new Color(0, 0, 0, 0.6f));
             bg.GetComponent<MeshRenderer>().sharedMaterial = bgMat;
 
             var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -28,8 +28,7 @@ namespace TrashRoyale.Combat
             fill.transform.localScale = new Vector3(0.66f, 0.07f, 1f);
             fill.transform.localPosition = new Vector3(0, 0, -0.001f);
             DestroyImmediate(fill.GetComponent<Collider>());
-            var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            fillMat.color = color;
+            var fillMat = SafeShader.NewUnlitColorMaterial(color);
             fill.GetComponent<MeshRenderer>().sharedMaterial = fillMat;
 
             var bar = root.AddComponent<HpBar>();

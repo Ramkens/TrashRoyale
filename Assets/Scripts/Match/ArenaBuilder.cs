@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TrashRoyale.Combat;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Match
 {
@@ -19,8 +20,7 @@ namespace TrashRoyale.Match
 
         static Material LitMat(Color c, Texture2D tex = null, Vector2? tile = null)
         {
-            var sh = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var m = new Material(sh);
+            var m = new Material(SafeShader.Opaque);
             m.color = c;
             if (tex != null)
             {
@@ -46,7 +46,7 @@ namespace TrashRoyale.Match
             bgPlane.transform.position = new Vector3(0, 6f, ArenaController.HalfLength + 14f);
             bgPlane.transform.localScale = new Vector3(40f, 22f, 1f);
             bgPlane.transform.rotation = Quaternion.Euler(0, 0, 0);
-            var bgMat = new Material(Shader.Find("Unlit/Texture") ?? Shader.Find("Standard"));
+            var bgMat = new Material(SafeShader.Opaque);
             bgMat.mainTexture = Tex("UI/menu_bg");
             bgMat.color = new Color(0.7f, 0.7f, 0.85f);
             bgPlane.GetComponent<MeshRenderer>().sharedMaterial = bgMat;

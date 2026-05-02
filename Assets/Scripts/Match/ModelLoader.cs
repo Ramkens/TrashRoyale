@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TrashRoyale.Core;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Match
 {
@@ -62,8 +63,7 @@ namespace TrashRoyale.Match
             if (rend != null)
             {
                 int idx = Mathf.Abs(card.id.GetHashCode()) % _palette.Length;
-                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-                mat.color = _palette[idx];
+                var mat = SafeShader.NewOpaqueMaterial(_palette[idx]);
                 rend.sharedMaterial = mat;
             }
             return go;

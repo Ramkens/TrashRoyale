@@ -24,7 +24,7 @@ namespace TrashRoyale.UI
         Text _copyBtnLabel;
         string _roomCode;
 
-        public static FriendlyBattlePopup Open(Transform canvas)
+        public static FriendlyBattlePopup Open(Transform canvas, string prefilledCode = null)
         {
             var go = new GameObject("FriendlyPopup");
             go.transform.SetParent(canvas, false);
@@ -38,6 +38,12 @@ namespace TrashRoyale.UI
 
             var p = go.AddComponent<FriendlyBattlePopup>();
             p.Build();
+            if (!string.IsNullOrEmpty(prefilledCode) && p._input != null)
+            {
+                p._input.text = prefilledCode.ToUpperInvariant();
+                if (p._statusText != null)
+                    p._statusText.text = "Код приглашения подставлен — нажми ПРИСОЕДИНИТЬСЯ";
+            }
             return p;
         }
 

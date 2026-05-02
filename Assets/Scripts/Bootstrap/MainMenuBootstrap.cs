@@ -29,6 +29,15 @@ namespace TrashRoyale.Bootstrap
             EnsureEventSystem();
             BuildUI();
             AudioManager.PlayMusic("menu_music");
+
+            // If app was launched via deep link (trashroyale://join/CODE or
+            // https://trashroyale-relay.onrender.com/join/CODE), auto-open the
+            // friendly battle popup with the code prefilled.
+            var pendingCode = TrashRoyale.Net.DeepLinkHandler.ConsumeJoinCode();
+            if (!string.IsNullOrEmpty(pendingCode))
+            {
+                FriendlyBattlePopup.Open(_canvas.transform, pendingCode);
+            }
         }
 
         void EnsureEventSystem()

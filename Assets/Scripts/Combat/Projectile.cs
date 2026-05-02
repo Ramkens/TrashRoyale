@@ -1,5 +1,6 @@
 using UnityEngine;
 using TrashRoyale.Match;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Combat
 {
@@ -19,8 +20,7 @@ namespace TrashRoyale.Combat
             sphere.transform.SetParent(go.transform, false);
             sphere.transform.localScale = Vector3.one * 0.18f;
             var col = sphere.GetComponent<Collider>(); if (col != null) Destroy(col);
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            mat.color = team == Team.Player ? new Color(0.5f, 0.9f, 1f) : new Color(1f, 0.5f, 0.3f);
+            var mat = SafeShader.NewUnlitColorMaterial(team == Team.Player ? new Color(0.5f, 0.9f, 1f) : new Color(1f, 0.5f, 0.3f));
             sphere.GetComponent<MeshRenderer>().sharedMaterial = mat;
             var p = go.AddComponent<Projectile>();
             p._target = target;
