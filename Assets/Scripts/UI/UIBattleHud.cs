@@ -77,24 +77,26 @@ namespace TrashRoyale.UI
             rtPhase.anchoredPosition = new Vector2(0, -140);
             _phaseText.color = new Color(1f, 0.85f, 0.4f);
 
-            var bottom = UIFactory.MakePanel(transform, "BottomBar", new Color(0, 0, 0, 0.55f));
-            var brt = bottom.GetComponent<RectTransform>();
+            // Transparent container for the elixir + cards row, sized so cards have
+            // their own slot and elixir bar sits ABOVE them (not behind).
+            var bottom = new GameObject("BottomBar");
+            bottom.transform.SetParent(transform, false);
+            var brt = bottom.AddComponent<RectTransform>();
             brt.anchorMin = new Vector2(0, 0);
             brt.anchorMax = new Vector2(1, 0);
             brt.pivot = new Vector2(0.5f, 0f);
-            brt.sizeDelta = new Vector2(0, 320);
+            brt.sizeDelta = new Vector2(0, 380);
             brt.anchoredPosition = Vector2.zero;
 
-            // Elixir bar in CR style: a fat horizontal bar with 10 segments (one per
-            // elixir point), filled from left in a bright purple, with the current
-            // value shown in a circle at the left side.
-            var elixirRow = UIFactory.MakePanel(bottom.transform, "ElixirRow", new Color(0.05f, 0.05f, 0.1f, 0.85f));
+            // Elixir bar in CR style: drop+number on the left, segmented horizontal
+            // fill bar to the right. Sits above the cards (not behind).
+            var elixirRow = UIFactory.MakePanel(bottom.transform, "ElixirRow", new Color(0.05f, 0.05f, 0.1f, 0.9f));
             var ert = elixirRow.GetComponent<RectTransform>();
             ert.anchorMin = new Vector2(0, 1);
             ert.anchorMax = new Vector2(1, 1);
             ert.pivot = new Vector2(0.5f, 1f);
-            ert.sizeDelta = new Vector2(-32, 56);
-            ert.anchoredPosition = new Vector2(0, -8);
+            ert.sizeDelta = new Vector2(-32, 70);
+            ert.anchoredPosition = new Vector2(0, -6);
 
             // Big elixir count (CR-style purple drop with white digit)
             var drop = new GameObject("ElixirDrop");

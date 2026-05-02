@@ -2,6 +2,7 @@ using UnityEngine;
 using TrashRoyale.Core;
 using TrashRoyale.Match;
 using TrashRoyale.Audio;
+using TrashRoyale.Util;
 
 namespace TrashRoyale.Combat
 {
@@ -14,6 +15,9 @@ namespace TrashRoyale.Combat
         Vector3 _moveDir;
         HpBar _hpBar;
         float _deployTimer;
+        float _deployTotal;
+        Transform _deployRing;
+        Renderer[] _renderers;
 
         public void Init(CardData data, Team t)
         {
@@ -24,9 +28,36 @@ namespace TrashRoyale.Combat
             _attackCd = 0f;
             _retargetCd = 0f;
             _deployTimer = data.deployTime;
+            _deployTotal = data.deployTime;
             CombatRegistry.Register(this);
-            _hpBar = HpBar.Create(this, t == Team.Player ? new Color(0.2f, 0.5f, 1f) : new Color(1f, 0.3f, 0.2f));
+            _hpBar = HpBar.Create(this, t == Team.Player ? new Color(0.2f, 0.5f, 1f) : new Color(1f, 0.3f, 0.2f), 2.0f);
+            _renderers = GetComponentsInChildren<Renderer>();
+            if (_deployTimer > 0f) BuildDeployRing();
+            ApplyDeployVisual(0f);
             AudioManager.PlayOneShot(card.voiceLine, transform.position);
+        }
+
+        void BuildDeployRing()
+        {
+            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = "DeployRing";
+            DestroyImmediate(ring.GetComponent<Collider>());
+            ring.transform.SetParent(transform, false);
+            ring.transform.localScale = new Vector3(1.4f, 0.02f, 1.4f);
+            ring.transform.localPosition = new Vector3(0, 0.05f, 0);
+            var mat = SafeShader.NewOpaqueMaterial(team == Team.Player ? new Color(0.4f, 0.7f, 1f, 0.8f) : new Color(1f, 0.4f, 0.4f, 0.8f));
+            ring.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            _deployRing = ring.transform;
+        }
+
+        void ApplyDeployVisual(float t)
+        {
+            // Pulse alpha + ring fill while deploying.
+            if (_deployRing != null)
+            {
+                float s = Mathf.Lerp(1.6f, 0.4f, t);
+                _deployRing.localScale = new Vector3(s, 0.02f, s);
+            }
         }
 
         void OnDestroy() => CombatRegistry.Unregister(this);
@@ -39,7 +70,17 @@ namespace TrashRoyale.Combat
             if (_deployTimer > 0f)
             {
                 _deployTimer -= dt;
-                return;
+                float t = _deployTotal > 0f ? 1f - (_deployTimer / _deployTotal) : 1f;
+                ApplyDeployVisual(t);
+                if (_deployTimer <= 0f && _deployRing != null)
+                {
+                    Destroy(_deployRing.gameObject);
+                    _deployRing = null;
+                }
+                else
+                {
+                    return;
+                }
             }
 
             if (_attackCd > 0f) _attackCd -= dt;

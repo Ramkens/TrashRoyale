@@ -96,16 +96,65 @@ namespace TrashRoyale.Bootstrap
             scaler.matchWidthOrHeight = 1f;
             canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
-            var btn = TrashRoyale.UI.UIFactory.MakeButton(canvasGo.transform, "BackBtn", "← В МЕНЮ", () =>
+            var btn = TrashRoyale.UI.UIFactory.MakeButton(canvasGo.transform, "SurrenderBtn", "СДАТЬСЯ", () =>
             {
-                AudioManager.StopMusic();
-                SceneManager.LoadScene("Main");
+                ShowSurrenderConfirm(canvasGo.transform);
             });
             var rt = btn.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = new Vector2(20, -20);
-            rt.sizeDelta = new Vector2(280, 90);
+            rt.sizeDelta = new Vector2(260, 80);
+        }
+
+        void ShowSurrenderConfirm(Transform parent)
+        {
+            // Modal dim background covering the whole screen.
+            var dim = TrashRoyale.UI.UIFactory.MakePanel(parent, "SurrenderDim", new Color(0, 0, 0, 0.78f));
+            var drt = dim.GetComponent<RectTransform>();
+            drt.anchorMin = Vector2.zero; drt.anchorMax = Vector2.one;
+            drt.offsetMin = drt.offsetMax = Vector2.zero;
+
+            var box = TrashRoyale.UI.UIFactory.MakePanel(dim.transform, "SurrenderBox", new Color(0.15f, 0.18f, 0.32f, 1f));
+            var brt = box.GetComponent<RectTransform>();
+            brt.anchorMin = new Vector2(0.5f, 0.5f);
+            brt.anchorMax = new Vector2(0.5f, 0.5f);
+            brt.pivot = new Vector2(0.5f, 0.5f);
+            brt.sizeDelta = new Vector2(820, 480);
+            brt.anchoredPosition = Vector2.zero;
+
+            var title = TrashRoyale.UI.UIFactory.MakeText(box.transform, "T", "Сдаться?", 70, TextAnchor.MiddleCenter);
+            var trt = title.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0, 0.7f); trt.anchorMax = new Vector2(1, 0.95f);
+            trt.offsetMin = trt.offsetMax = Vector2.zero;
+            title.color = new Color(1f, 0.85f, 0.4f);
+
+            var msg = TrashRoyale.UI.UIFactory.MakeText(box.transform, "M",
+                "Противник получит победу и кубки.\nПродолжить?",
+                32, TextAnchor.MiddleCenter);
+            var mrt = msg.GetComponent<RectTransform>();
+            mrt.anchorMin = new Vector2(0.05f, 0.4f); mrt.anchorMax = new Vector2(0.95f, 0.7f);
+            mrt.offsetMin = mrt.offsetMax = Vector2.zero;
+            msg.color = Color.white;
+
+            var yes = TrashRoyale.UI.UIFactory.MakeButton(box.transform, "Yes", "Да, сдаюсь", () =>
+            {
+                AudioManager.StopMusic();
+                MatchManager.I?.PlayerSurrender();
+            });
+            var yrt = yes.GetComponent<RectTransform>();
+            yrt.anchorMin = new Vector2(0.07f, 0.12f);
+            yrt.anchorMax = new Vector2(0.48f, 0.32f);
+            yrt.offsetMin = yrt.offsetMax = Vector2.zero;
+
+            var no = TrashRoyale.UI.UIFactory.MakeButton(box.transform, "No", "Отмена", () =>
+            {
+                Object.Destroy(dim);
+            });
+            var nrt = no.GetComponent<RectTransform>();
+            nrt.anchorMin = new Vector2(0.52f, 0.12f);
+            nrt.anchorMax = new Vector2(0.93f, 0.32f);
+            nrt.offsetMin = nrt.offsetMax = Vector2.zero;
         }
 
         void BuildErrorScreen(System.Exception ex)

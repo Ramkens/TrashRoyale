@@ -41,19 +41,21 @@ namespace TrashRoyale.UI
             rt.sizeDelta = new Vector2(w, h);
             rt.anchoredPosition = new Vector2(startX + idx * (w + gap), h / 2 + 12f);
 
-            // Frame
+            // Background must exist as a raycast target (so drag handlers fire),
+            // but is fully transparent so the card looks like just art + cost bubble.
             var bg = go.AddComponent<Image>();
-            bg.color = new Color(0.85f, 0.7f, 0.4f);
+            bg.color = new Color(0, 0, 0, 0);
+            bg.raycastTarget = true;
 
-            // Art fills frame except for tiny border
+            // Art fills the slot.
             var art = new GameObject("Art");
             art.transform.SetParent(go.transform, false);
             var artRt = art.AddComponent<RectTransform>();
-            artRt.anchorMin = new Vector2(0.04f, 0.04f);
-            artRt.anchorMax = new Vector2(0.96f, 0.96f);
+            artRt.anchorMin = new Vector2(0f, 0f);
+            artRt.anchorMax = new Vector2(1f, 1f);
             artRt.offsetMin = artRt.offsetMax = Vector2.zero;
             var artImg = art.AddComponent<Image>();
-            artImg.color = new Color(0.15f, 0.18f, 0.3f);
+            artImg.color = new Color(0, 0, 0, 0);
             artImg.preserveAspect = true;
             artImg.raycastTarget = false;
 
@@ -110,18 +112,24 @@ namespace TrashRoyale.UI
             if (card == null)
             {
                 _cost.text = "";
-                _costBubble.color = new Color(0.4f, 0.4f, 0.4f);
-                _bg.color = new Color(0.4f, 0.4f, 0.4f);
+                _costBubble.color = new Color(0.4f, 0.4f, 0.4f, 0.5f);
                 _art.sprite = null;
-                _art.color = new Color(0.1f, 0.1f, 0.15f);
+                _art.color = new Color(0, 0, 0, 0);
                 return;
             }
             _cost.text = card.elixirCost.ToString();
-            _costBubble.color = new Color(0.85f, 0.3f, 0.95f);
-            _bg.color = affordable ? new Color(0.85f, 0.7f, 0.4f) : new Color(0.5f, 0.5f, 0.55f);
+            _costBubble.color = new Color(0.7f, 0.25f, 0.85f);
             var sprite = CardArtCache.Get(card.id);
-            if (sprite != null) { _art.sprite = sprite; _art.color = affordable ? Color.white : new Color(0.6f, 0.6f, 0.6f); }
-            else { _art.color = card.Kind == CardKind.Spell ? new Color(1f, 0.5f, 0.2f) : new Color(0.4f, 0.55f, 0.85f); }
+            if (sprite != null)
+            {
+                _art.sprite = sprite;
+                _art.color = affordable ? Color.white : new Color(0.55f, 0.55f, 0.55f);
+            }
+            else
+            {
+                _art.sprite = null;
+                _art.color = card.Kind == CardKind.Spell ? new Color(1f, 0.5f, 0.2f) : new Color(0.4f, 0.55f, 0.85f);
+            }
         }
 
         public Sprite Art => _art != null ? _art.sprite : null;

@@ -171,5 +171,12 @@ namespace TrashRoyale.Match
             Phase = MatchPhase.Ended;
             OnMatchEnded?.Invoke(winner);
         }
+
+        public void PlayerSurrender()
+        {
+            if (Phase == MatchPhase.Ended) return;
+            EnemyCrowns = 3;
+            EndMatch(Team.Enemy);
+        }
     }
 }

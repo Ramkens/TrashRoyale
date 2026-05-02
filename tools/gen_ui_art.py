@@ -198,15 +198,17 @@ def make_arena_tile(w=512, h=512, fname="arena_grass.png"):
     base = Image.new("RGB", (w, h), (60, 130, 65))
     d = ImageDraw.Draw(base)
     rng = random.Random(7)
-    # Diagonal stripes (light/dark grass)
-    for i in range(0, w + h, 96):
-        d.polygon([(i, 0), (i + 48, 0), (i - h + 48, h), (i - h, h)], fill=(75, 145, 75))
-    # Speckles (flowers/dirt)
-    for _ in range(200):
+    # Soft mowed lawn stripes (alternating light/dark green bands).
+    band_h = 48
+    for i, y in enumerate(range(0, h, band_h)):
+        c = (74, 142, 75) if i % 2 == 0 else (60, 128, 64)
+        d.rectangle((0, y, w, y + band_h), fill=c)
+    # A couple of subtle darker tufts (no rainbow flower confetti).
+    for _ in range(18):
         x = rng.randint(0, w - 1)
         y = rng.randint(0, h - 1)
-        c = rng.choice([(255, 230, 80), (255, 100, 100), (240, 240, 240), (50, 110, 55)])
-        d.ellipse((x, y, x + 4, y + 4), fill=c)
+        c = (52, 116, 56)
+        d.ellipse((x, y, x + 3, y + 3), fill=c)
     base.save(os.path.join(OUT, fname), "PNG")
     print(f"{fname} saved")
 
