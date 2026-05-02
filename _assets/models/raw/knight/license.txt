@@ -1,0 +1,11 @@
+Model Information:
+* title:	free lowpoly toon knight
+* source:	https://sketchfab.com/3d-models/free-lowpoly-toon-knight-0722db29739c4a278651769c3ec3d05e
+* author:	DINmatin (https://sketchfab.com/DINmatin)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "free lowpoly toon knight" (https://sketchfab.com/3d-models/free-lowpoly-toon-knight-0722db29739c4a278651769c3ec3d05e) by DINmatin (https://sketchfab.com/DINmatin) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

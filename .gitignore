@@ -1,0 +1,57 @@
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]ser[Ss]ettings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Crashlytics + Unity
+crashlytics-build.properties
+
+# Misc
+[Aa]ssets/[Aa]ssetStoreTools*
+[Aa]ssets/Plugins/Editor/JetBrains*
+
+# Generated / heavy assets folders we keep externally
+_assets/models/raw/*.zip
+
+# Node
+relay-server/node_modules/
+
+# Unity build outputs
+*.apk
+*.aab
+
+
+# Unity license artifacts
+_assets/license/
+Unity_v*.alf
+
+# Build outputs
+build/

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Animated Nyan Cat
+* source:	https://sketchfab.com/3d-models/animated-nyan-cat-7841f5567aa34453b596e81e12a76e45
+* author:	Maurice Svay (https://sketchfab.com/mauricesvay)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Animated Nyan Cat" (https://sketchfab.com/3d-models/animated-nyan-cat-7841f5567aa34453b596e81e12a76e45) by Maurice Svay (https://sketchfab.com/mauricesvay) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

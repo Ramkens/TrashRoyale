@@ -1,0 +1,127 @@
+using UnityEngine;
+using TrashRoyale.Core;
+using TrashRoyale.Match;
+using TrashRoyale.Combat;
+
+namespace TrashRoyale.AI
+{
+    public class BotController : MonoBehaviour
+    {
+        public float Difficulty = 0.5f;
+        float _decisionCooldown = 1.5f;
+
+        void Update()
+        {
+            var match = MatchManager.I;
+            if (match == null || match.Phase == MatchPhase.Ended || match.Phase == MatchPhase.Countdown) return;
+            if (!match.IsLocalPvE) return;
+
+            _decisionCooldown -= Time.deltaTime;
+            if (_decisionCooldown > 0f) return;
+            _decisionCooldown = Mathf.Lerp(2.5f, 0.7f, Difficulty);
+
+            var deck = match.EnemyDeck;
+            if (deck == null) return;
+
+            int bestSlot = -1;
+            CardData bestCard = null;
+            int bestPriority = -1;
+
+            for (int i = 0; i < 4; i++)
+            {
+                var c = deck.Hand[i];
+                if (c == null) continue;
+                if (c.elixirCost > match.EnemyElixir.Current + 0.5f) continue;
+                int priority = ScoreCard(c, match);
+                if (priority > bestPriority)
+                {
+                    bestPriority = priority;
+                    bestCard = c;
+                    bestSlot = i;
+                }
+            }
+
+            if (bestCard == null) return;
+
+            float chance = Mathf.Lerp(0.4f, 1.0f, Difficulty);
+            if (Random.value > chance) return;
+
+            Vector3 spawn = ChooseSpawnPoint(bestCard, match);
+            match.TryDeployEnemy(bestSlot, spawn);
+        }
+
+        int ScoreCard(CardData c, MatchManager match)
+        {
+            int score = 5;
+            int playerUnits = CountTeamUnits(Team.Player);
+            int enemyUnits = CountTeamUnits(Team.Enemy);
+
+            if (c.Kind == CardKind.Spell)
+            {
+                if (playerUnits >= 3) score += 8;
+                else score -= 4;
+            }
+            if (c.targetMode == "BuildingsOnly" && playerUnits == 0) score += 3;
+            if (c.elixirCost <= 3 && match.EnemyElixir.Current < 6) score += 2;
+            if (c.elixirCost >= 6 && match.EnemyElixir.Current >= 8) score += 4;
+            if (c.isAir) score += 1;
+            if (playerUnits > enemyUnits + 1) score += 3;
+            return score + Random.Range(0, 4);
+        }
+
+        int CountTeamUnits(Team t)
+        {
+            int n = 0;
+            var all = CombatRegistry.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var d = all[i];
+                if (d == null || d.isDead) continue;
+                if (d.team != t) continue;
+                if (d.isBuilding) continue;
+                n++;
+            }
+            return n;
+        }
+
+        Vector3 ChooseSpawnPoint(CardData card, MatchManager match)
+        {
+            float side = Random.value < 0.5f ? -1f : 1f;
+            float z;
+            if (card.Kind == CardKind.Spell)
+            {
+                z = Random.Range(-ArenaController.HalfLength + 1.5f, -1.5f);
+            }
+            else
+            {
+                if (card.targetMode == "BuildingsOnly")
+                {
+                    z = Random.Range(0.8f, 4.0f);
+                    side = ChooseAttackingSide();
+                }
+                else
+                {
+                    z = Random.Range(0.8f, ArenaController.HalfLength - 1.2f);
+                }
+            }
+            float x = side * Random.Range(1.2f, 3.6f);
+            return new Vector3(x, 0f, z);
+        }
+
+        float ChooseAttackingSide()
+        {
+            int leftCount = 0, rightCount = 0;
+            var all = CombatRegistry.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var d = all[i];
+                if (d == null || d.isDead) continue;
+                if (d.team != Team.Player) continue;
+                if (d.transform.position.x < 0f) leftCount++; else rightCount++;
+            }
+            if (leftCount < rightCount) return -1f;
+            if (rightCount < leftCount) return 1f;
+            return Random.value < 0.5f ? -1f : 1f;
+        }
+    }
+}

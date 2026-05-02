@@ -1,0 +1,11 @@
+Model Information:
+* title:	---CameraMan---
+* source:	https://sketchfab.com/3d-models/cameraman-62ea2ffb7d37476e8e5f3e93c2ef5aea
+* author:	TheDirector (https://sketchfab.com/The-Director)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "---CameraMan---" (https://sketchfab.com/3d-models/cameraman-62ea2ffb7d37476e8e5f3e93c2ef5aea) by TheDirector (https://sketchfab.com/The-Director) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

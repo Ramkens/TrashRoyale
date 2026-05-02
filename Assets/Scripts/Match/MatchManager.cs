@@ -1,0 +1,175 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using TrashRoyale.Core;
+using TrashRoyale.Combat;
+using TrashRoyale.Audio;
+
+namespace TrashRoyale.Match
+{
+    public class MatchManager : MonoBehaviour
+    {
+        public static MatchManager I { get; private set; }
+
+        public ElixirManager PlayerElixir { get; private set; }
+        public ElixirManager EnemyElixir { get; private set; }
+        public Deck PlayerDeck { get; private set; }
+        public Deck EnemyDeck { get; private set; }
+        public MatchPhase Phase { get; private set; } = MatchPhase.Countdown;
+
+        public float MatchDurationSeconds = 180f;
+        public float DoubleElixirAt = 60f;
+        public float TripleElixirAt = 30f;
+        public float TimeRemaining { get; private set; }
+        public float CountdownRemaining { get; private set; } = 3f;
+
+        public Tower PlayerKing, EnemyKing;
+        public List<Tower> PlayerSideTowers { get; } = new List<Tower>();
+        public List<Tower> EnemySideTowers { get; } = new List<Tower>();
+
+        public int PlayerCrowns { get; private set; }
+        public int EnemyCrowns { get; private set; }
+
+        public Action<Team> OnMatchEnded;
+        public Action<Tower> OnTowerDown;
+        public bool IsLocalPvE { get; set; } = true;
+
+        void Awake()
+        {
+            if (I != null && I != this) { Destroy(gameObject); return; }
+            I = this;
+            TimeRemaining = MatchDurationSeconds;
+        }
+
+        void OnDestroy() { if (I == this) I = null; }
+
+        public void InitMatch(List<string> playerDeck, List<string> enemyDeck, bool pve)
+        {
+            PlayerElixir = new ElixirManager(Team.Player, 5f);
+            EnemyElixir = new ElixirManager(Team.Enemy, 5f);
+            PlayerDeck = new Deck(playerDeck);
+            EnemyDeck = new Deck(enemyDeck);
+            IsLocalPvE = pve;
+            Phase = MatchPhase.Countdown;
+            CountdownRemaining = 3f;
+            TimeRemaining = MatchDurationSeconds;
+            PlayerCrowns = 0;
+            EnemyCrowns = 0;
+        }
+
+        void Update()
+        {
+            float dt = Time.deltaTime;
+            if (Phase == MatchPhase.Countdown)
+            {
+                CountdownRemaining -= dt;
+                if (CountdownRemaining <= 0f)
+                {
+                    Phase = MatchPhase.SingleElixir;
+                    AudioManager.PlayOneShot("match_start", Vector3.zero);
+                }
+                return;
+            }
+            if (Phase == MatchPhase.Ended) return;
+
+            TimeRemaining -= dt;
+            if (Phase == MatchPhase.SingleElixir && TimeRemaining <= MatchDurationSeconds - 60f) Phase = MatchPhase.DoubleElixir;
+            if (Phase == MatchPhase.DoubleElixir && TimeRemaining <= 30f) Phase = MatchPhase.TripleElixir;
+
+            PlayerElixir.Tick(dt, Phase);
+            EnemyElixir.Tick(dt, Phase);
+
+            if (TimeRemaining <= 0f)
+            {
+                EndOnTime();
+            }
+        }
+
+        public bool TryDeployPlayer(int handSlot, Vector3 worldPos)
+        {
+            return TryDeploy(Team.Player, handSlot, worldPos);
+        }
+
+        public bool TryDeployEnemy(int handSlot, Vector3 worldPos)
+        {
+            return TryDeploy(Team.Enemy, handSlot, worldPos);
+        }
+
+        public bool TryDeploy(Team team, int handSlot, Vector3 worldPos)
+        {
+            if (Phase == MatchPhase.Ended || Phase == MatchPhase.Countdown) return false;
+            var deck = team == Team.Player ? PlayerDeck : EnemyDeck;
+            var elixir = team == Team.Player ? PlayerElixir : EnemyElixir;
+            if (deck == null) return false;
+            var card = deck.Hand[handSlot];
+            if (card == null) return false;
+            if (!ArenaController.I.IsValidPlacement(team, worldPos, card)) return false;
+            if (!elixir.TrySpend(card.elixirCost)) return false;
+            deck.PlayHandSlot(handSlot);
+            UnitFactory.SpawnCard(card, team, worldPos);
+            AudioManager.PlayOneShot("card_play", worldPos);
+
+            if (team == Team.Player && !IsLocalPvE)
+            {
+                var netSync = GetComponent<TrashRoyale.Net.NetMatchSync>();
+                if (netSync != null) netSync.SendCardPlay(handSlot, card.id, worldPos);
+            }
+            return true;
+        }
+
+        public void OnTowerDestroyed(Tower t)
+        {
+            OnTowerDown?.Invoke(t);
+            if (t.team == Team.Player)
+            {
+                EnemyCrowns++;
+                if (PlayerSideTowers.Remove(t)) ActivatePlayerKing();
+            }
+            else
+            {
+                PlayerCrowns++;
+                if (EnemySideTowers.Remove(t)) ActivateEnemyKing();
+            }
+            if (t.isKing)
+            {
+                EndMatch(t.team == Team.Player ? Team.Enemy : Team.Player);
+                return;
+            }
+            if (PlayerCrowns >= 3) EndMatch(Team.Player);
+            else if (EnemyCrowns >= 3) EndMatch(Team.Enemy);
+        }
+
+        void ActivatePlayerKing()
+        {
+            if (PlayerKing != null && !PlayerKing.isActive) PlayerKing.Activate();
+        }
+
+        void ActivateEnemyKing()
+        {
+            if (EnemyKing != null && !EnemyKing.isActive) EnemyKing.Activate();
+        }
+
+        void EndOnTime()
+        {
+            if (PlayerCrowns > EnemyCrowns) EndMatch(Team.Player);
+            else if (EnemyCrowns > PlayerCrowns) EndMatch(Team.Enemy);
+            else EndMatch(LowestKingHpTeam());
+        }
+
+        Team LowestKingHpTeam()
+        {
+            float p = PlayerKing != null ? PlayerKing.hp / Mathf.Max(1f, PlayerKing.maxHp) : 0f;
+            float e = EnemyKing != null ? EnemyKing.hp / Mathf.Max(1f, EnemyKing.maxHp) : 0f;
+            if (p > e) return Team.Player;
+            if (e > p) return Team.Enemy;
+            return Team.Player;
+        }
+
+        void EndMatch(Team winner)
+        {
+            if (Phase == MatchPhase.Ended) return;
+            Phase = MatchPhase.Ended;
+            OnMatchEnded?.Invoke(winner);
+        }
+    }
+}
