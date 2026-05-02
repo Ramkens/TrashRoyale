@@ -62,6 +62,9 @@ namespace TrashRoyale.Persistence
             var json = JsonUtility.ToJson(this);
             PlayerPrefs.SetString("trashroyale.profile", json);
             PlayerPrefs.Save();
+            // PR5: best-effort push to the cloud profile if the player
+            // is logged in. Failure is silent — local save is canon.
+            CloudProfileSync.QueuePush(json);
         }
 
         public void RecordWin(int trophyDelta)

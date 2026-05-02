@@ -11,10 +11,10 @@ namespace TrashRoyale.Match
         public const float HalfLength = 8.0f;
         public const float RiverHalfThickness = 0.5f;
 
-        // Bonus radius around a destroyed enemy princess tower the player is allowed
-        // to deploy in. Tuned so it covers the broken tower and a strip of land in
-        // front of / behind it (CR-style "tower zone unlock").
-        public const float TowerUnlockRadius = 3.6f;
+        // Radius around the enemy king inside which the player cannot drop
+        // a unit when only one princess tower has fallen. Without this you
+        // can land a unit directly on the king for an instant 3-crown win.
+        public const float KingExclusionRadius = 1.6f;
 
         public Transform PlayerLeftBridge, PlayerRightBridge;
         public Transform[] PlayerSpawnPoints;
@@ -67,38 +67,44 @@ namespace TrashRoyale.Match
             // Both princess towers still alive -> no enemy-half deployment.
             if (aliveCount >= 2) return false;
 
-            // 0 alive -> full enemy half (except a small king-tower exclusion zone).
-            if (aliveCount == 0)
+            // King exclusion is shared between the 0-alive and 1-alive
+            // branches: the king should NEVER be deployable-on directly.
+            // A small radius is enough — the player still has to walk a
+            // unit the rest of the way.
+            var enemyKing = team == Team.Player ? match.EnemyKing : match.PlayerKing;
+            if (enemyKing != null && !enemyKing.isDead)
             {
-                // Don't let the player drop directly on top of the enemy king.
-                var king = team == Team.Player ? match.EnemyKing : match.PlayerKing;
-                if (king != null)
-                {
-                    var d = worldPos - king.transform.position;
-                    d.y = 0f;
-                    if (d.sqrMagnitude < 1.6f * 1.6f) return false;
-                }
-                return true;
+                var dk = worldPos - enemyKing.transform.position;
+                dk.y = 0f;
+                if (dk.sqrMagnitude < KingExclusionRadius * KingExclusionRadius) return false;
             }
 
-            // 1 princess tower destroyed -> deploy zone is a circle around the
-            // destroyed tower's old position. We can't read a destroyed tower's
-            // transform anymore (it's been removed), so derive the zone from the
-            // surviving tower's mirrored x.
+            // 0 alive -> full enemy half is open.
+            if (aliveCount == 0) return true;
+
+            // 1 princess tower destroyed -> open the ENTIRE LANE on the
+            // side where it fell (full half-x strip from the river to the
+            // back wall) — same as Clash Royale.
             //
-            // Princess towers sit at x = ±2.8 on each side. If x=-2.8 survives, the
-            // x=+2.8 tower fell -> zone center is (+2.8, ±(HalfLength-1.2)).
-            float zCenter = team == Team.Player ? (HalfLength - 1.2f) : -(HalfLength - 1.2f);
+            // Previously this used a 3.6-unit circle centered on the
+            // destroyed tower; that left a hole between the river and the
+            // tower (so the player couldn't push from the river up the
+            // open lane) AND the circle reached the king (~2.9u away),
+            // which let a single unit be dropped directly on the king for
+            // an instant 3-crown sweep. Both are fixed by switching to a
+            // half-strip.
+            //
+            // Princess towers sit at x = ±2.8; the midline x = 0
+            // separates the two lanes.
             foreach (var t in enemyTowers)
             {
                 if (t == null || t.isDead) continue;
                 float survivingX = t.transform.position.x;
-                // The other lane (mirror of survivor) is the destroyed one.
+                // Mirror: the lane that fell is on -survivingX side.
                 float openX = -survivingX;
-                var center = new Vector3(openX, 0f, zCenter);
-                var d = worldPos - center;
-                d.y = 0f;
-                if (d.sqrMagnitude <= TowerUnlockRadius * TowerUnlockRadius) return true;
+                bool sameLaneAsOpenX =
+                    (openX > 0f && worldPos.x > 0f) || (openX < 0f && worldPos.x < 0f);
+                if (sameLaneAsOpenX) return true;
             }
             return false;
         }

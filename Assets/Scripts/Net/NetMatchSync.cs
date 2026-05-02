@@ -101,5 +101,9 @@ namespace TrashRoyale.Net
     public static class NetConfig
     {
         public static string RelayUrl = "wss://trashroyale-relay.onrender.com/ws";
+        // PR5: HTTP base for /auth, /profile, /queue endpoints. Same
+        // host as the relay; the WebSocket scheme is swapped out in
+        // AuthClient when building the URL.
+        public static string ApiBaseUrl = "https://trashroyale-relay.onrender.com";
     }
 }

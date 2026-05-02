@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TrashRoyale.Bootstrap;
 using TrashRoyale.Persistence;
+using TrashRoyale.Net;
 
 namespace TrashRoyale.UI
 {
@@ -22,6 +23,10 @@ namespace TrashRoyale.UI
         GameObject _joinBlock;
         Button _copyBtn;
         Text _copyBtnLabel;
+        Button _waitBtn;
+        Text _waitBtnLabel;
+        Button _randomBtn;
+        Text _randomBtnLabel;
         string _roomCode;
 
         public static FriendlyBattlePopup Open(Transform canvas, string prefilledCode = null)
@@ -64,25 +69,36 @@ namespace TrashRoyale.UI
             trt.offsetMin = trt.offsetMax = Vector2.zero;
             title.color = new Color(1f, 0.93f, 0.4f);
 
-            // Host block (visible until "Создать комнату" pressed; then shows code+link)
+            // Three vertical blocks now: HOST (top), JOIN-BY-CODE
+            // (middle), RANDOM (bottom). Random matchmaking lives in
+            // its own row so the friend-code flow doesn't have to
+            // share buttons with it.
             _hostBlock = new GameObject("HostBlock");
             _hostBlock.transform.SetParent(panel.transform, false);
             var hbr = _hostBlock.AddComponent<RectTransform>();
-            hbr.anchorMin = new Vector2(0.04f, 0.42f);
+            hbr.anchorMin = new Vector2(0.04f, 0.55f);
             hbr.anchorMax = new Vector2(0.96f, 0.86f);
             hbr.offsetMin = hbr.offsetMax = Vector2.zero;
 
             BuildHostBlock(_hostBlock.transform);
 
-            // Join block (always visible at bottom)
             _joinBlock = new GameObject("JoinBlock");
             _joinBlock.transform.SetParent(panel.transform, false);
             var jbr = _joinBlock.AddComponent<RectTransform>();
-            jbr.anchorMin = new Vector2(0.04f, 0.04f);
-            jbr.anchorMax = new Vector2(0.96f, 0.4f);
+            jbr.anchorMin = new Vector2(0.04f, 0.27f);
+            jbr.anchorMax = new Vector2(0.96f, 0.53f);
             jbr.offsetMin = jbr.offsetMax = Vector2.zero;
 
             BuildJoinBlock(_joinBlock.transform);
+
+            var randomBlock = new GameObject("RandomBlock");
+            randomBlock.transform.SetParent(panel.transform, false);
+            var rbr = randomBlock.AddComponent<RectTransform>();
+            rbr.anchorMin = new Vector2(0.04f, 0.04f);
+            rbr.anchorMax = new Vector2(0.96f, 0.25f);
+            rbr.offsetMin = rbr.offsetMax = Vector2.zero;
+
+            BuildRandomBlock(randomBlock.transform);
 
             // Close button (top-right)
             var closeBtn = UIFactory.MakeButton(transform, "Close", "ЗАКРЫТЬ", () => Destroy(gameObject));
@@ -128,20 +144,36 @@ namespace TrashRoyale.UI
             ltr.offsetMin = ltr.offsetMax = Vector2.zero;
             _linkText.color = new Color(0.85f, 0.92f, 1f, 0.95f);
 
-            // Two buttons in a row: Создать / Копировать (use smaller font + constrained overflow)
+            // Three buttons in one row: Create / Copy / Wait. Wait
+            // becomes interactable AFTER the host has created a code,
+            // and is the missing step that previously made hosting
+            // unplayable — the host generated a code and waited on the
+            // popup, but never connected to the relay because no scene
+            // change ever happened. Pressing Wait enters the Battle
+            // scene as host, which spins up the WebSocket and parks
+            // the player in the intro overlay until the guest
+            // connects.
             var hostBtn = UIFactory.MakeButton(parent, "Host", "СОЗДАТЬ", () => HostRoom());
-            ShrinkLabel(hostBtn, 38);
+            ShrinkLabel(hostBtn, 32);
             var hbr = hostBtn.GetComponent<RectTransform>();
-            hbr.anchorMin = new Vector2(0.02f, 0.04f); hbr.anchorMax = new Vector2(0.49f, 0.3f);
+            hbr.anchorMin = new Vector2(0.02f, 0.04f); hbr.anchorMax = new Vector2(0.34f, 0.3f);
             hbr.offsetMin = hbr.offsetMax = Vector2.zero;
 
             _copyBtn = UIFactory.MakeButton(parent, "Copy", "КОПИЯ", () => CopyLink());
-            ShrinkLabel(_copyBtn, 38);
+            ShrinkLabel(_copyBtn, 32);
             var cbr = _copyBtn.GetComponent<RectTransform>();
-            cbr.anchorMin = new Vector2(0.51f, 0.04f); cbr.anchorMax = new Vector2(0.98f, 0.3f);
+            cbr.anchorMin = new Vector2(0.36f, 0.04f); cbr.anchorMax = new Vector2(0.65f, 0.3f);
             cbr.offsetMin = cbr.offsetMax = Vector2.zero;
             _copyBtnLabel = _copyBtn.GetComponentInChildren<Text>();
             SetCopyEnabled(false);
+
+            _waitBtn = UIFactory.MakeButton(parent, "Wait", "ВОЙТИ", () => WaitForFriend());
+            ShrinkLabel(_waitBtn, 32);
+            var wbr = _waitBtn.GetComponent<RectTransform>();
+            wbr.anchorMin = new Vector2(0.67f, 0.04f); wbr.anchorMax = new Vector2(0.98f, 0.3f);
+            wbr.offsetMin = wbr.offsetMax = Vector2.zero;
+            _waitBtnLabel = _waitBtn.GetComponentInChildren<Text>();
+            SetWaitEnabled(false);
         }
 
         void BuildJoinBlock(Transform parent)
@@ -173,6 +205,28 @@ namespace TrashRoyale.UI
             jbr.offsetMin = jbr.offsetMax = Vector2.zero;
         }
 
+        void BuildRandomBlock(Transform parent)
+        {
+            var bg = UIFactory.MakePanel(parent, "BgRandom", new Color(0, 0, 0, 0.35f));
+            var bgRt = bg.GetComponent<RectTransform>();
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
+            bg.raycastTarget = false;
+
+            var label = UIFactory.MakeText(parent, "RandomLabel", "ИЛИ СЫГРАЙ СО СЛУЧАЙНЫМ", 26, TextAnchor.MiddleCenter);
+            var lrt = label.GetComponent<RectTransform>();
+            lrt.anchorMin = new Vector2(0, 0.6f); lrt.anchorMax = new Vector2(1, 1f);
+            lrt.offsetMin = lrt.offsetMax = Vector2.zero;
+            label.color = new Color(1f, 1f, 1f, 0.85f);
+
+            _randomBtn = UIFactory.MakeButton(parent, "Random", "СЛУЧАЙНЫЙ СОПЕРНИК", () => JoinRandom());
+            ShrinkLabel(_randomBtn, 32);
+            var rbr = _randomBtn.GetComponent<RectTransform>();
+            rbr.anchorMin = new Vector2(0.05f, 0.06f); rbr.anchorMax = new Vector2(0.95f, 0.6f);
+            rbr.offsetMin = rbr.offsetMax = Vector2.zero;
+            _randomBtnLabel = _randomBtn.GetComponentInChildren<Text>();
+        }
+
         static void ShrinkLabel(Button btn, int fontSize)
         {
             var t = btn.GetComponentInChildren<Text>();
@@ -198,6 +252,16 @@ namespace TrashRoyale.UI
             }
         }
 
+        void SetWaitEnabled(bool on)
+        {
+            if (_waitBtn == null) return;
+            _waitBtn.interactable = on;
+            if (_waitBtnLabel != null)
+            {
+                _waitBtnLabel.color = on ? Color.white : new Color(1, 1, 1, 0.45f);
+            }
+        }
+
         void HostRoom()
         {
             _roomCode = MakeCode();
@@ -205,9 +269,17 @@ namespace TrashRoyale.UI
             if (_codeText != null) _codeText.text = _roomCode;
             if (_linkText != null) _linkText.text = link;
             SetCopyEnabled(true);
+            SetWaitEnabled(true);
             // Auto-copy on first generation
             GUIUtility.systemCopyBuffer = link;
-            if (_statusText != null) _statusText.text = "Ссылка скопирована! Кинь её другу. Жду подключения...";
+            if (_statusText != null) _statusText.text = "Скопировано! Кинь ссылку другу, потом жми ВОЙТИ.";
+        }
+
+        void WaitForFriend()
+        {
+            if (string.IsNullOrEmpty(_roomCode)) return;
+            if (_statusText != null) _statusText.text = "Запускаю комнату " + _roomCode + "...";
+            StartBattle(_roomCode, true);
         }
 
         void CopyLink()
@@ -228,6 +300,30 @@ namespace TrashRoyale.UI
             }
             if (_statusText != null) _statusText.text = "Подключаюсь к комнате " + code + "...";
             StartBattle(code, false);
+        }
+
+        void JoinRandom()
+        {
+            if (_randomBtn != null) _randomBtn.interactable = false;
+            if (_statusText != null) _statusText.text = "Ищу случайного соперника...";
+            StartCoroutine(MatchmakingClient.JoinQueue(result =>
+            {
+                if (_randomBtn != null) _randomBtn.interactable = true;
+                if (!result.ok)
+                {
+                    if (_statusText != null) _statusText.text = "Очередь недоступна (" + result.error + ")";
+                    return;
+                }
+                if (_statusText != null)
+                {
+                    _statusText.text = result.matched
+                        ? ("Найден соперник! Подключаюсь к " + result.roomCode + "...")
+                        : ("Жду в очереди... код " + result.roomCode);
+                }
+                // Server tells us our role: if we created the room we're host,
+                // otherwise we slot in as guest.
+                StartBattle(result.roomCode, result.role == "host");
+            }));
         }
 
         string MakeCode()

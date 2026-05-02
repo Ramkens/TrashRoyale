@@ -7,6 +7,7 @@ using TrashRoyale.Audio;
 using TrashRoyale.Persistence;
 using TrashRoyale.UI;
 using TrashRoyale.Core;
+using TrashRoyale.Net;
 
 namespace TrashRoyale.Bootstrap
 {
@@ -29,6 +30,10 @@ namespace TrashRoyale.Bootstrap
             EnsureEventSystem();
             BuildUI();
             AudioManager.PlayMusic("menu_music");
+            // PR5: kick off the cloud-sync singleton so saves get
+            // pushed even if the user never opens the login popup
+            // (no-ops while logged out).
+            CloudProfileSync.EnsureBooted();
 
             // If app was launched via deep link (trashroyale://join/CODE or
             // https://trashroyale-relay.onrender.com/join/CODE), auto-open the
@@ -37,6 +42,14 @@ namespace TrashRoyale.Bootstrap
             if (!string.IsNullOrEmpty(pendingCode))
             {
                 FriendlyBattlePopup.Open(_canvas.transform, pendingCode);
+            }
+            // PR5: prompt for login on first run if the user has never
+            // logged in OR explicitly chosen offline mode. Skipping is
+            // always allowed; this is just a one-time CTA so the user
+            // knows cloud-saved profiles exist.
+            else if (!AuthClient.IsLoggedIn && !AuthClient.OfflineMode)
+            {
+                LoginPopup.Open(_canvas.transform, RefreshBanner);
             }
         }
 

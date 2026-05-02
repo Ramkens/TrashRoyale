@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
+const { makeAuth } = require('./auth');
 
 const PORT = process.env.PORT || 8080;
 
@@ -96,7 +97,25 @@ setInterval(() => {
 // Periodic snapshot to ride out unscheduled crashes.
 setInterval(snapshot, 5_000);
 
-const server = http.createServer((req, res) => {
+// PR5: email/password auth + cloud-saved profile.
+const auth = makeAuth({ stateDir: STATE_DIR, log: console });
+
+const server = http.createServer(async (req, res) => {
+  // Permissive CORS for the in-app HTTP client (no browser origin
+  // matters here, but kept for parity with the join landing page).
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // Auth + profile endpoints first — return early if handled.
+  try {
+    const handled = await auth.handle(req, res);
+    if (handled) return;
+  } catch (err) {
+    console.warn('[auth] handler error:', err.message);
+  }
+
   if (req.url === '/' || req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
