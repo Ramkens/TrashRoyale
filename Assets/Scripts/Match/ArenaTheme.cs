@@ -13,6 +13,11 @@ namespace TrashRoyale.Match
     public class ArenaTheme
     {
         public string DisplayName;
+        // Resources path key (without extension) for the preview thumbnail
+        // shown in Road of Glory and the main-menu arena banner. Lookup
+        // happens via Resources.Load<Texture2D>("ArenaThumbs/" + ThumbnailKey).
+        // Empty / missing = falls back to a flat color tile.
+        public string ThumbnailKey;
         public Color SkyTop;            // camera clear colour (top of viewport)
         public Color PlayerSideTint;    // tint applied to grass on the local side
         public Color EnemySideTint;     // tint applied to grass on the remote side
@@ -33,6 +38,7 @@ namespace TrashRoyale.Match
             // 0 — 0+ kубков. Старая помойка, зелень с фиолетовым отливом.
             new ArenaTheme {
                 DisplayName = "Помойка",
+                ThumbnailKey = "arena_0",
                 SkyTop = new Color(0.18f, 0.22f, 0.45f),
                 PlayerSideTint = new Color(0.85f, 1.0f, 0.85f),
                 EnemySideTint = new Color(0.95f, 0.85f, 1.0f),
@@ -44,9 +50,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.95f, 0.45f, 0.45f),
                 FogColor = new Color(0.5f, 0.55f, 0.7f), FogDensity = 0f,
             },
-            // 1 — 250 kубков. Болотный закат.
+            // 1 — 250 kубков. Стоновая крепость в песках.
             new ArenaTheme {
-                DisplayName = "Болото",
+                DisplayName = "Каменный Двор",
+                ThumbnailKey = "arena_1",
                 SkyTop = new Color(0.32f, 0.40f, 0.22f),
                 PlayerSideTint = new Color(0.55f, 0.78f, 0.45f),
                 EnemySideTint = new Color(0.40f, 0.55f, 0.30f),
@@ -58,9 +65,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.7f, 0.4f, 0.3f),
                 FogColor = new Color(0.45f, 0.55f, 0.45f), FogDensity = 0.012f,
             },
-            // 2 — 500 kубков. Бетон/индастриал.
+            // 2 — 500 kубков. Колизей с баннерами.
             new ArenaTheme {
-                DisplayName = "Свалка Бетон",
+                DisplayName = "Колизей",
+                ThumbnailKey = "arena_2",
                 SkyTop = new Color(0.28f, 0.30f, 0.34f),
                 PlayerSideTint = new Color(0.60f, 0.62f, 0.66f),
                 EnemySideTint = new Color(0.55f, 0.55f, 0.60f),
@@ -72,9 +80,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.85f, 0.45f, 0.4f),
                 FogColor = new Color(0.5f, 0.55f, 0.6f), FogDensity = 0.014f,
             },
-            // 3 — 750 kубков. Лава, всё в красно-оранжевом.
+            // 3 — 750 kубков. Тренировочная башня с красными флагами.
             new ArenaTheme {
-                DisplayName = "Лавовая Помойка",
+                DisplayName = "Боевая Башня",
+                ThumbnailKey = "arena_3",
                 SkyTop = new Color(0.35f, 0.10f, 0.10f),
                 PlayerSideTint = new Color(0.95f, 0.55f, 0.40f),
                 EnemySideTint = new Color(1.0f, 0.45f, 0.25f),
@@ -86,9 +95,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.95f, 0.30f, 0.10f),
                 FogColor = new Color(0.7f, 0.3f, 0.15f), FogDensity = 0.020f,
             },
-            // 4 — 1000 kубков. Золотая арена.
+            // 4 — 1000 kубков. Магическая шахта с кристаллами.
             new ArenaTheme {
-                DisplayName = "Золотая Арена",
+                DisplayName = "Кристалльная Шахта",
+                ThumbnailKey = "arena_4",
                 SkyTop = new Color(0.42f, 0.34f, 0.18f),
                 PlayerSideTint = new Color(1.0f, 0.95f, 0.65f),
                 EnemySideTint = new Color(1.0f, 0.85f, 0.50f),
@@ -100,9 +110,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.95f, 0.45f, 0.30f),
                 FogColor = new Color(0.85f, 0.75f, 0.45f), FogDensity = 0.008f,
             },
-            // 5 — 1250 kубков. Закат / pink sunset.
+            // 5 — 1250 kубков. Гоблинская пилорама.
             new ArenaTheme {
-                DisplayName = "Закат на Свалке",
+                DisplayName = "Пилорама",
+                ThumbnailKey = "arena_5",
                 SkyTop = new Color(0.65f, 0.30f, 0.40f),
                 PlayerSideTint = new Color(1.0f, 0.78f, 0.65f),
                 EnemySideTint = new Color(0.95f, 0.55f, 0.65f),
@@ -114,9 +125,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.85f, 0.30f, 0.45f),
                 FogColor = new Color(0.85f, 0.55f, 0.55f), FogDensity = 0.010f,
             },
-            // 6 — 1500 kубков. Лёд.
+            // 6 — 1500 kубков. Кузница варваров.
             new ArenaTheme {
-                DisplayName = "Ледяная Помойка",
+                DisplayName = "Кузница",
+                ThumbnailKey = "arena_6",
                 SkyTop = new Color(0.55f, 0.78f, 0.95f),
                 PlayerSideTint = new Color(0.85f, 0.95f, 1.0f),
                 EnemySideTint = new Color(0.75f, 0.90f, 1.0f),
@@ -128,9 +140,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.7f, 0.5f, 1f),
                 FogColor = new Color(0.85f, 0.92f, 1f), FogDensity = 0.015f,
             },
-            // 7 — 1750 kубков. Космос/тьма.
+            // 7 — 1750 kубков. Королевский двор с флагами.
             new ArenaTheme {
-                DisplayName = "Космо-Свалка",
+                DisplayName = "Королевский Двор",
+                ThumbnailKey = "arena_7",
                 SkyTop = new Color(0.05f, 0.04f, 0.20f),
                 PlayerSideTint = new Color(0.30f, 0.25f, 0.55f),
                 EnemySideTint = new Color(0.20f, 0.15f, 0.45f),
@@ -142,9 +155,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.95f, 0.35f, 0.85f),
                 FogColor = new Color(0.10f, 0.10f, 0.30f), FogDensity = 0.022f,
             },
-            // 8 — 2000 kубков. Неон-кибер.
+            // 8 — 2000 kубков. Ледяная арена.
             new ArenaTheme {
-                DisplayName = "Кибер-Свалка",
+                DisplayName = "Ледяная Арена",
+                ThumbnailKey = "arena_8",
                 SkyTop = new Color(0.05f, 0.10f, 0.20f),
                 PlayerSideTint = new Color(0.30f, 0.85f, 0.95f),
                 EnemySideTint = new Color(0.95f, 0.30f, 0.85f),
@@ -156,9 +170,10 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(1f, 0.20f, 0.65f),
                 FogColor = new Color(0.10f, 0.20f, 0.30f), FogDensity = 0.018f,
             },
-            // 9 — 2500 kубков. Король Помойки. Финальная арена, сочный пурпур+золото.
+            // 9 — 2500 kубков. Сад голема / серпентин.
             new ArenaTheme {
-                DisplayName = "Король Помойки",
+                DisplayName = "Сад Голема",
+                ThumbnailKey = "arena_9",
                 SkyTop = new Color(0.20f, 0.05f, 0.12f),
                 PlayerSideTint = new Color(0.95f, 0.85f, 0.45f),
                 EnemySideTint = new Color(0.65f, 0.20f, 0.30f),
@@ -170,12 +185,28 @@ namespace TrashRoyale.Match
                 EnemyKingTint = new Color(0.85f, 0.10f, 0.20f),
                 FogColor = new Color(0.40f, 0.10f, 0.15f), FogDensity = 0.012f,
             },
+            // 10 — 2500 kубков. Неон-мегаполис (cyber endgame).
+            new ArenaTheme {
+                DisplayName = "Мегаполис",
+                ThumbnailKey = "arena_10",
+                SkyTop = new Color(0.05f, 0.10f, 0.20f),
+                PlayerSideTint = new Color(0.30f, 0.85f, 0.95f),
+                EnemySideTint = new Color(0.95f, 0.30f, 0.85f),
+                RiverTint = new Color(0.40f, 0.95f, 0.90f),
+                BridgeTint = new Color(0.20f, 0.20f, 0.30f),
+                PlayerTowerTint = new Color(0.30f, 1.00f, 0.95f),
+                EnemyTowerTint = new Color(1.00f, 0.30f, 0.85f),
+                PlayerKingTint = new Color(0.20f, 0.95f, 0.85f),
+                EnemyKingTint = new Color(1f, 0.20f, 0.65f),
+                FogColor = new Color(0.10f, 0.20f, 0.30f), FogDensity = 0.018f,
+            },
         };
 
         public static int IndexFor(int trophies)
         {
-            // 250-trophy steps for the first 9 arenas, then 500 for the
-            // final tier so it lines up with the King-of-the-Trash medal.
+            // 11 tiers, 250-trophy steps. The user supplied 11 arena
+            // preview thumbnails so we run from 0 — "Помойка" all
+            // the way to the legendary 10 — "Мегаполис".
             if (trophies < 250)  return 0;
             if (trophies < 500)  return 1;
             if (trophies < 750)  return 2;
@@ -184,8 +215,9 @@ namespace TrashRoyale.Match
             if (trophies < 1500) return 5;
             if (trophies < 1750) return 6;
             if (trophies < 2000) return 7;
-            if (trophies < 2500) return 8;
-            return 9;
+            if (trophies < 2250) return 8;
+            if (trophies < 2500) return 9;
+            return 10;
         }
 
         public static int TrophyFloor(int idx)
@@ -201,6 +233,7 @@ namespace TrashRoyale.Match
                 case 6: return 1500;
                 case 7: return 1750;
                 case 8: return 2000;
+                case 9: return 2250;
                 default: return 2500;
             }
         }

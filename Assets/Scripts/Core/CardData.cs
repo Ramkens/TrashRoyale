@@ -91,6 +91,22 @@ namespace TrashRoyale.Core
             }
         }
         public TargetMode Targets => targetMode == "BuildingsOnly" ? TargetMode.BuildingsOnly : TargetMode.Any;
+
+        /// <summary>
+        /// True if <paramref name="tag"/> appears in the card's
+        /// <c>mechanics</c> array. Cheap helper so combat code can write
+        /// <c>if (card.HasMechanic("charge")) ...</c> without null/length
+        /// checks at every call site. Comparison is case-sensitive.
+        /// </summary>
+        public bool HasMechanic(string tag)
+        {
+            if (mechanics == null || mechanics.Length == 0) return false;
+            for (int i = 0; i < mechanics.Length; i++)
+            {
+                if (mechanics[i] == tag) return true;
+            }
+            return false;
+        }
     }
 
     [Serializable]

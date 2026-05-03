@@ -32,6 +32,20 @@ namespace TrashRoyale.Match
         static void SpawnUnits(CardData card, Team team, Vector3 worldPos)
         {
             int count = Mathf.Max(1, card.spawnCount);
+            SpawnUnitsExact(card, team, worldPos, count);
+        }
+
+        /// <summary>
+        /// Spawns exactly <paramref name="count"/> instances of the unit
+        /// in a ring around <paramref name="worldPos"/>, ignoring
+        /// <c>card.spawnCount</c>. Used by spawner-on-tick buildings
+        /// (e.g. Хата Sus emits 1 imposter per tick instead of the
+        /// 4-pack the amongus card normally produces).
+        /// </summary>
+        public static void SpawnUnitsExact(CardData card, Team team, Vector3 worldPos, int count)
+        {
+            if (card == null) return;
+            count = Mathf.Max(1, count);
             for (int i = 0; i < count; i++)
             {
                 Vector3 offset = Vector3.zero;

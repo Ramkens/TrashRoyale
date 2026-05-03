@@ -310,7 +310,7 @@ def make_card(card):
 def main():
     data = json.load(open(CARDS_JSON, encoding="utf-8"))
     by_id = {c["id"]: c for c in data["cards"]}
-    targets = ["cannon", "tesla", "totem", "bomber", "doge_mage", "imposter", "imposter_hut"]
+    targets = ["cannon", "tesla", "totem", "bomber", "doge_mage", "imposter_hut"]
     for cid in targets:
         if cid not in by_id:
             print("missing card metadata for", cid)

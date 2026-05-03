@@ -1,0 +1,11 @@
+Model Information:
+* title:	Medieval Wooden Hut {Draft}
+* source:	https://sketchfab.com/3d-models/medieval-wooden-hut-draft-58c6ff175bd3423a829565f8053a9dd5
+* author:	AspectStudios (https://sketchfab.com/AspectStudio)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Medieval Wooden Hut {Draft}" (https://sketchfab.com/3d-models/medieval-wooden-hut-draft-58c6ff175bd3423a829565f8053a9dd5) by AspectStudios (https://sketchfab.com/AspectStudio) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

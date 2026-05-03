@@ -12,6 +12,20 @@ namespace TrashRoyale.Combat
         public bool isAir = false;
         public bool isDead = false;
         public Transform aimPoint;
+        // Mechanic state — exposed so Unit/Tower can drive it without a
+        // separate component. Defaults of 0 keep existing units behaving
+        // identically (no immunity, no stun, no reflect).
+        // Phase / deploy-immune: counter ticks down in Update; while > 0,
+        // TakeDamage is a no-op. Used by cards with the "phase_immune"
+        // mechanic (e.g. teleporting wizard).
+        public float phaseImmuneRemaining;
+        // Stun: while > 0, Unit.Update returns early (no movement / no
+        // attacks) but the unit can still receive damage. Driven by
+        // freeze projectiles and the Freeze spell.
+        public float stunRemaining;
+        // Reflect: 0..1 fraction of incoming damage echoed back at the
+        // source. Set per card during Init.
+        public float reflectFraction;
 
         public virtual void Init(Team t, float maxHpValue)
         {
@@ -24,13 +38,36 @@ namespace TrashRoyale.Combat
         public virtual void TakeDamage(float dmg, Damageable source = null)
         {
             if (isDead) return;
+            // Phase / deploy-immune: ignore damage entirely while the
+            // phase counter is positive. Counter is ticked down by Unit.
+            if (phaseImmuneRemaining > 0f) return;
             hp -= dmg;
+            // Reflect: bounce a fraction of the damage we just took
+            // back at whoever hit us, but only if the source is alive
+            // and on the OPPOSING team (avoid friendly fire feedback
+            // loops). We do this BEFORE checking death so a fatal hit
+            // still reflects.
+            if (reflectFraction > 0f && source != null && !source.isDead && source.team != team)
+            {
+                source.TakeDamage(dmg * reflectFraction, this);
+            }
             if (hp <= 0f)
             {
                 hp = 0f;
                 isDead = true;
                 OnDeath();
             }
+        }
+
+        /// <summary>
+        /// Heals the entity, capping at <c>maxHp</c>. Safe against
+        /// negative inputs and dead targets. Used by lifesteal and
+        /// future heal spells.
+        /// </summary>
+        public virtual void Heal(float amount)
+        {
+            if (isDead || amount <= 0f) return;
+            hp = Mathf.Min(maxHp, hp + amount);
         }
 
         protected abstract void OnDeath();

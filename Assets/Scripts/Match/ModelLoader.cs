@@ -117,8 +117,26 @@ namespace TrashRoyale.Match
         /// 3D meshes and primitives composite cleanly with the existing card
         /// art on the deck.
         /// </summary>
+        // Map building card id -> prefab folder under Resources/UnitGltf
+        // (we share the same folder so glTFast's importer picks them up
+        // identically for units and buildings).
+        static readonly Dictionary<string, string> BuildingPrefabName = new()
+        {
+            { "imposter_hut", "imposter_hut" },
+        };
+
         public static GameObject InstantiateBuilding(CardData card)
         {
+            // Try a real glTF building model first (Хата Sus uses
+            // AspectStudios's Medieval Wooden Hut, CC-BY-4.0). Falls
+            // through to primitive build if the asset is missing so
+            // the game keeps running in dev environments without the
+            // full asset tree pulled.
+            if (BuildingPrefabName.TryGetValue(card.id, out var pname))
+            {
+                var prefab = Resources.Load<GameObject>("UnitGltf/" + pname + "/scene");
+                if (prefab != null) return BuildFromPrefab(card, prefab);
+            }
             var go = new GameObject(card.id);
             switch (card.id)
             {

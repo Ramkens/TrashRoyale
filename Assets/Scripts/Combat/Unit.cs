@@ -18,6 +18,18 @@ namespace TrashRoyale.Combat
         float _deployTotal;
         Transform _deployRing;
         Renderer[] _renderers;
+        // "charge" mechanic: counts seconds the unit has been moving
+        // toward an enemy without combat. Reaches card.chargeBuildSeconds
+        // → next attack deals card.chargeMultiplier× damage. Resets on
+        // every successful attack.
+        float _chargeBuiltSeconds;
+        bool _chargeReady;
+        // "inferno_ramp" mechanic: tracks how long we've been hitting
+        // the same target. Damage scales linearly from infernoRampStartDmg
+        // to infernoRampMaxDmg over infernoRampSeconds, then caps. Resets
+        // when the target changes or dies.
+        Damageable _infernoLockTarget;
+        float _infernoLockSeconds;
 
         public void Init(CardData data, Team t)
         {
@@ -35,6 +47,18 @@ namespace TrashRoyale.Combat
             if (_deployTimer > 0f) BuildDeployRing();
             ApplyDeployVisual(0f);
             AudioManager.PlayOneShot(card.voiceLine, transform.position, card.sfxVolume);
+
+            // Mechanic state: copy card values into the per-instance
+            // Damageable counters so Update / TakeDamage have cheap
+            // local checks instead of dereferencing card every frame.
+            if (card.HasMechanic("phase_immune") && card.phaseImmuneSeconds > 0f)
+            {
+                phaseImmuneRemaining = card.phaseImmuneSeconds;
+            }
+            if (card.HasMechanic("reflect") && card.reflectFraction > 0f)
+            {
+                reflectFraction = card.reflectFraction;
+            }
         }
 
         void BuildDeployRing()
@@ -67,6 +91,11 @@ namespace TrashRoyale.Combat
             if (isDead) return;
             float dt = Time.deltaTime;
 
+            // Tick down phase / stun timers regardless of deploy state
+            // so freeze spells thrown on a deploying unit still wear off.
+            if (phaseImmuneRemaining > 0f) phaseImmuneRemaining -= dt;
+            if (stunRemaining > 0f) stunRemaining -= dt;
+
             if (_deployTimer > 0f)
             {
                 _deployTimer -= dt;
@@ -83,6 +112,16 @@ namespace TrashRoyale.Combat
                 }
             }
 
+            // Stun = full action lock. We still tick attack/retarget
+            // cooldowns so the unit doesn't get a free attack the
+            // moment the stun ends.
+            if (stunRemaining > 0f)
+            {
+                if (_attackCd > 0f) _attackCd -= dt;
+                if (_retargetCd > 0f) _retargetCd -= dt;
+                return;
+            }
+
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
 
@@ -95,6 +134,7 @@ namespace TrashRoyale.Combat
             if (_target == null)
             {
                 MoveTowardEnemySide(dt);
+                AccumulateCharge(dt);
                 return;
             }
 
@@ -105,16 +145,52 @@ namespace TrashRoyale.Combat
             if (dist <= effectiveRange)
             {
                 FaceTarget(toTarget);
+                // Inferno-ramp keeps charging only while we keep
+                // hitting the same target; switching targets resets.
+                if (card.HasMechanic("inferno_ramp"))
+                {
+                    if (_infernoLockTarget != _target)
+                    {
+                        _infernoLockTarget = _target;
+                        _infernoLockSeconds = 0f;
+                    }
+                    else
+                    {
+                        _infernoLockSeconds += dt;
+                    }
+                }
                 if (_attackCd <= 0f)
                 {
                     DoAttack();
                     _attackCd = card.attackInterval;
+                    // Charge consumed on hit; rebuild from scratch.
+                    _chargeBuiltSeconds = 0f;
+                    _chargeReady = false;
                 }
             }
             else
             {
                 Move(toTarget.normalized, dt);
+                AccumulateCharge(dt);
+                // Out of range = inferno target effectively reset on next hit.
+                _infernoLockTarget = null;
+                _infernoLockSeconds = 0f;
             }
+        }
+
+        /// <summary>
+        /// Builds up the charge timer for cards with the "charge"
+        /// mechanic. Once enough seconds of uninterrupted travel pass,
+        /// the next attack will use <c>card.chargeMultiplier</c>. Cards
+        /// without the tag short-circuit immediately so this is free for
+        /// the rest of the roster.
+        /// </summary>
+        void AccumulateCharge(float dt)
+        {
+            if (!card.HasMechanic("charge")) return;
+            if (card.chargeBuildSeconds <= 0f || card.chargeMultiplier <= 1f) return;
+            _chargeBuiltSeconds += dt;
+            if (_chargeBuiltSeconds >= card.chargeBuildSeconds) _chargeReady = true;
         }
 
         void AcquireTarget()
@@ -155,13 +231,15 @@ namespace TrashRoyale.Combat
         {
             if (_target == null || _target.isDead) return;
             AudioManager.PlayOneShot("attack_swing", transform.position);
+            float dmg = ResolveOutgoingDamage();
             if (card.range > 1.6f)
             {
                 if (card.id == "nyancat")
                 {
                     // Nyan cat shoots an instant rainbow beam at the target.
                     FxFactory.SpawnRainbowBeam(transform.position + Vector3.up * 0.6f, _target.AimPos);
-                    _target.TakeDamage(card.damage, this);
+                    _target.TakeDamage(dmg, this);
+                    OnDamageDealt(dmg);
                 }
                 else if (card.splashRadius > 0f)
                 {
@@ -170,14 +248,30 @@ namespace TrashRoyale.Combat
                     // every enemy in <c>splashRadius</c>.
                     var origin = transform.position + Vector3.up * 0.6f;
                     var impact = _target.AimPos;
+                    float capturedDmg = dmg;
                     FxFactory.LaunchFireballMissile(origin, impact, card.splashRadius, () =>
                     {
-                        ApplySplash(impact);
+                        ApplySplashWithDamage(impact, capturedDmg);
+                        OnDamageDealt(capturedDmg);
                     });
+                }
+                else if (card.HasMechanic("multishot_3"))
+                {
+                    // Three projectiles in a horizontal spread. Center
+                    // shot still locks onto the target (it's a normal
+                    // homing Projectile.Spawn); the wing shots fly to
+                    // virtual aim points offset by the configured
+                    // spread degrees so they can clip extra units.
+                    float spread = card.multishotSpreadDeg > 0f ? card.multishotSpreadDeg : 12f;
+                    Projectile.Spawn(transform.position + Vector3.up * 0.6f, _target, dmg, team);
+                    SpawnSpreadProjectile(dmg, +spread);
+                    SpawnSpreadProjectile(dmg, -spread);
+                    OnDamageDealt(dmg);
                 }
                 else
                 {
-                    Projectile.Spawn(transform.position + Vector3.up * 0.6f, _target, card.damage, team);
+                    Projectile.Spawn(transform.position + Vector3.up * 0.6f, _target, dmg, team);
+                    OnDamageDealt(dmg);
                 }
             }
             else
@@ -186,14 +280,79 @@ namespace TrashRoyale.Combat
                 {
                     // Melee splash (e.g. shrek-mode swing): hit everyone in range.
                     var impact = _target.AimPos;
-                    ApplySplash(impact);
+                    ApplySplashWithDamage(impact, dmg);
                 }
                 else
                 {
-                    _target.TakeDamage(card.damage, this);
+                    _target.TakeDamage(dmg, this);
                 }
+                OnDamageDealt(dmg);
                 PlayThemedMelee(_target.AimPos);
             }
+        }
+
+        /// <summary>
+        /// Computes outgoing damage for the next swing including all
+        /// mechanic modifiers: charge bonus, berserker scaling, and
+        /// inferno ramp. Multiplicative so they stack predictably.
+        /// </summary>
+        float ResolveOutgoingDamage()
+        {
+            float dmg = card.damage;
+            // Inferno ramp overrides base damage entirely — it has its
+            // own start/max scale read from the card.
+            if (card.HasMechanic("inferno_ramp") && card.infernoRampMaxDmg > card.infernoRampStartDmg)
+            {
+                float dur = Mathf.Max(0.01f, card.infernoRampSeconds);
+                float t = Mathf.Clamp01(_infernoLockSeconds / dur);
+                dmg = Mathf.Lerp(card.infernoRampStartDmg, card.infernoRampMaxDmg, t);
+            }
+            if (_chargeReady && card.chargeMultiplier > 1f)
+            {
+                dmg *= card.chargeMultiplier;
+            }
+            if (card.HasMechanic("berserker") && maxHp > 0f)
+            {
+                // Linear scale from 1.0 at full HP to 1.6 at 0 HP.
+                float ratio = 1f - Mathf.Clamp01(hp / maxHp);
+                dmg *= 1f + 0.6f * ratio;
+            }
+            return dmg;
+        }
+
+        /// <summary>
+        /// Post-damage hook for mechanics that fire after the hit
+        /// resolves: lifesteal heal, charge consume (already done),
+        /// future on-hit buffs, etc.
+        /// </summary>
+        void OnDamageDealt(float dmg)
+        {
+            if (card.HasMechanic("lifesteal") && card.lifestealFraction > 0f)
+            {
+                Heal(dmg * card.lifestealFraction);
+            }
+        }
+
+        /// <summary>
+        /// Fires a projectile at a virtual aim point rotated
+        /// <paramref name="degrees"/> around the up-axis from the line
+        /// to the current target. Uses a temporary aim transform so
+        /// the standard <see cref="Projectile.Spawn"/> homing path
+        /// works without modification.
+        /// </summary>
+        void SpawnSpreadProjectile(float dmg, float degrees)
+        {
+            if (_target == null) return;
+            Vector3 origin = transform.position + Vector3.up * 0.6f;
+            Vector3 forward = (_target.AimPos - origin);
+            forward.y = 0f;
+            forward = Quaternion.Euler(0f, degrees, 0f) * forward.normalized;
+            Vector3 aim = origin + forward * Mathf.Max(2f, (_target.transform.position - transform.position).magnitude);
+            // Synthetic "phantom" target so Projectile.Spawn has
+            // something to home onto. We grab the closest enemy near
+            // the spread aim instead of inventing a Damageable.
+            var phantom = CombatRegistry.FindClosestEnemy(aim, team, 4f, false, card.targetsAir) ?? _target;
+            Projectile.Spawn(origin, phantom, dmg, team);
         }
 
         /// <summary>
@@ -202,7 +361,14 @@ namespace TrashRoyale.Combat
         /// damages units (not the casting team), respects air-target rules,
         /// and uses 2D distance so vertical air offsets don't dodge the AoE.
         /// </summary>
-        void ApplySplash(Vector3 center)
+        void ApplySplash(Vector3 center) => ApplySplashWithDamage(center, card.damage);
+
+        /// <summary>
+        /// Same as <see cref="ApplySplash"/> but takes the resolved
+        /// damage value so charge / berserker / inferno bonuses propagate
+        /// to every enemy caught in the AoE.
+        /// </summary>
+        void ApplySplashWithDamage(Vector3 center, float dmg)
         {
             float r2 = card.splashRadius * card.splashRadius;
             var all = CombatRegistry.All;
@@ -215,7 +381,7 @@ namespace TrashRoyale.Combat
                 var dx = d.transform.position - center;
                 dx.y = 0;
                 if (dx.sqrMagnitude > r2) continue;
-                d.TakeDamage(card.damage, this);
+                d.TakeDamage(dmg, this);
             }
             FxFactory.SpawnExplosion(center, card.splashRadius);
         }
@@ -256,6 +422,21 @@ namespace TrashRoyale.Combat
         {
             AudioManager.PlayOneShot("unit_death", transform.position);
             FxFactory.SpawnPoof(transform.position + Vector3.up * 0.5f);
+            // "spawn_on_death" mechanic: emit N copies of another card
+            // around our corpse. Used by e.g. Goblin-Barrel-style cards
+            // and exploding totems. We resolve the spawn through the
+            // CardDatabase so designers can chain cards by id without
+            // touching code.
+            if (card.HasMechanic("spawn_on_death") &&
+                !string.IsNullOrEmpty(card.spawnOnDeathCardId) &&
+                card.spawnOnDeathCount > 0)
+            {
+                var child = TrashRoyale.Core.CardDatabase.Get(card.spawnOnDeathCardId);
+                if (child != null)
+                {
+                    UnitFactory.SpawnUnitsExact(child, team, transform.position, card.spawnOnDeathCount);
+                }
+            }
             if (_hpBar != null) Destroy(_hpBar.gameObject);
             Destroy(gameObject);
         }

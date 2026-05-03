@@ -81,7 +81,11 @@ namespace TrashRoyale.Bootstrap
 
             BuildBackground();
             BuildPlayerBanner();
-            BuildTitle();
+            BuildArenaBanner();
+            // BuildTitle() removed: the giant "TRASH ROYALE" word
+            // overlapped the new arena banner. The game already has
+            // a splash logo on launch; in-menu we lean on the arena
+            // art instead, exactly like Clash Royale does.
             BuildBattleCenter();
             BuildBottomNav();
         }
@@ -127,9 +131,10 @@ namespace TrashRoyale.Bootstrap
                 ProfilePopup.Open(_canvas.transform, _profile, RefreshBanner);
             });
 
-            // Medals strip — small icons of unlocked achievements,
-            // tucked between the name and trophy count.
-            BuildMedalsStrip(banner.transform);
+            // Medals strip removed per design refresh — the menu now
+            // shows only the player name + trophies / tier band, and
+            // the arena thumbnail above the BATTLE button doubles as
+            // the entry point to Road of Glory.
 
             // Player name (tap banner to edit)
             _playerNameText = UIFactory.MakeText(banner.transform, "Name", _profile.playerName, 50, TextAnchor.MiddleLeft);
@@ -364,19 +369,64 @@ namespace TrashRoyale.Bootstrap
             var trainLabel = trainBtn.GetComponentInChildren<Text>();
             if (trainLabel != null) trainLabel.fontSize = 32;
 
-            var friendsBtn = UIFactory.MakeButton(nav.transform, "FriendsTab", "ДРУЗЬЯ", () =>
-            {
-                AudioManager.PlaySfx("click");
-                FriendlyBattlePopup.Open(_canvas.transform);
-            });
-            var frt2 = friendsBtn.GetComponent<RectTransform>();
-            frt2.anchorMin = new Vector2(0.67f, 0.15f);
-            frt2.anchorMax = new Vector2(0.98f, 0.85f);
-            frt2.offsetMin = frt2.offsetMax = Vector2.zero;
-            var friendsLabel = friendsBtn.GetComponentInChildren<Text>();
-            if (friendsLabel != null) friendsLabel.fontSize = 36;
+            // "ДРУЗЬЯ" tab removed: online sync is unstable, the
+            // user asked us to either nail it or hide it, and we're
+            // shipping a single-player-first refresh. Friendly battle
+            // can come back later behind a settings toggle. The two
+            // remaining tabs grow to fill the row evenly.
+            drt.anchorMax = new Vector2(0.49f, 0.85f);
+            trrt.anchorMin = new Vector2(0.51f, 0.15f);
+            trrt.anchorMax = new Vector2(0.98f, 0.85f);
 
             BuildSettingsButton();
+        }
+
+        // Big arena thumbnail panel sandwiched between the player
+        // banner and the BATTLE button. It mirrors how Clash Royale
+        // shows the current arena art and acts as a tap-target into
+        // Road of Glory.
+        void BuildArenaBanner()
+        {
+            var theme = ArenaTheme.Current(_profile.trophies);
+            var arena = UIFactory.MakePanel(_canvas.transform, "ArenaBanner", Color.white);
+            var art = arena.GetComponent<RectTransform>();
+            art.anchorMin = new Vector2(0.10f, 0.63f);
+            art.anchorMax = new Vector2(0.90f, 0.86f);
+            art.offsetMin = art.offsetMax = Vector2.zero;
+            Texture2D thumbTex = !string.IsNullOrEmpty(theme.ThumbnailKey)
+                ? Resources.Load<Texture2D>("ArenaThumbs/" + theme.ThumbnailKey)
+                : null;
+            if (thumbTex != null)
+            {
+                arena.sprite = Sprite.Create(thumbTex,
+                    new Rect(0, 0, thumbTex.width, thumbTex.height),
+                    new Vector2(0.5f, 0.5f), 100f);
+                arena.preserveAspect = true;
+            }
+            else
+            {
+                arena.color = Color.Lerp(theme.PlayerSideTint, theme.EnemySideTint, 0.5f);
+            }
+            // Translucent dark scrim along the bottom for the title.
+            var scrim = UIFactory.MakePanel(arena.transform, "Scrim", new Color(0, 0, 0, 0.55f));
+            var sr = scrim.GetComponent<RectTransform>();
+            sr.anchorMin = new Vector2(0f, 0f);
+            sr.anchorMax = new Vector2(1f, 0.30f);
+            sr.offsetMin = sr.offsetMax = Vector2.zero;
+            var name = UIFactory.MakeText(arena.transform, "ArenaName", theme.DisplayName, 38, TextAnchor.MiddleCenter);
+            var nrt = name.GetComponent<RectTransform>();
+            nrt.anchorMin = new Vector2(0f, 0f);
+            nrt.anchorMax = new Vector2(1f, 0.30f);
+            nrt.offsetMin = nrt.offsetMax = Vector2.zero;
+            name.color = new Color(1f, 0.93f, 0.45f);
+            // Tap anywhere on the banner → Road of Glory popup.
+            var btn = arena.gameObject.AddComponent<Button>();
+            btn.targetGraphic = arena;
+            btn.onClick.AddListener(() =>
+            {
+                AudioManager.PlaySfx("click");
+                RoadToGloryPopup.Open(_canvas.transform, _profile);
+            });
         }
 
         void BuildSettingsButton()

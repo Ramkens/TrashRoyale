@@ -119,24 +119,45 @@ namespace TrashRoyale.UI
                     : new Color(0.20f, 0.20f, 0.24f, 1f);
             }
 
-            // Twin colour swatches showing the per-side tint.
-            var swatchL = UIFactory.MakePanel(row.transform, "Left", theme.PlayerSideTint);
-            var slr = swatchL.GetComponent<RectTransform>();
-            slr.anchorMin = new Vector2(0.02f, 0.15f);
-            slr.anchorMax = new Vector2(0.13f, 0.85f);
-            slr.offsetMin = slr.offsetMax = Vector2.zero;
-
-            var swatchR = UIFactory.MakePanel(row.transform, "Right", theme.EnemySideTint);
-            var srr = swatchR.GetComponent<RectTransform>();
-            srr.anchorMin = new Vector2(0.13f, 0.15f);
-            srr.anchorMax = new Vector2(0.24f, 0.85f);
-            srr.offsetMin = srr.offsetMax = Vector2.zero;
-
-            var sky = UIFactory.MakePanel(row.transform, "Sky", theme.SkyTop);
-            var skr = sky.GetComponent<RectTransform>();
-            skr.anchorMin = new Vector2(0.24f, 0.15f);
-            skr.anchorMax = new Vector2(0.30f, 0.85f);
-            skr.offsetMin = skr.offsetMax = Vector2.zero;
+            // Arena thumbnail (user-supplied preview) — fills the left
+            // 30% of the row at 1:1 aspect. Falls back to the colour
+            // swatch if the thumbnail asset is missing.
+            Texture2D thumbTex = !string.IsNullOrEmpty(theme.ThumbnailKey)
+                ? Resources.Load<Texture2D>("ArenaThumbs/" + theme.ThumbnailKey)
+                : null;
+            if (thumbTex != null)
+            {
+                var thumb = UIFactory.MakePanel(row.transform, "Thumb", Color.white);
+                var trt = thumb.GetComponent<RectTransform>();
+                trt.anchorMin = new Vector2(0.02f, 0.10f);
+                trt.anchorMax = new Vector2(0.30f, 0.90f);
+                trt.offsetMin = trt.offsetMax = Vector2.zero;
+                var sp = Sprite.Create(thumbTex,
+                    new Rect(0, 0, thumbTex.width, thumbTex.height),
+                    new Vector2(0.5f, 0.5f), 100f);
+                thumb.sprite = sp;
+                thumb.preserveAspect = true;
+                if (!unlocked) thumb.color = new Color(0.4f, 0.4f, 0.4f, 0.6f);
+            }
+            else
+            {
+                // Fallback: twin colour swatches showing the per-side tint.
+                var swatchL = UIFactory.MakePanel(row.transform, "Left", theme.PlayerSideTint);
+                var slr = swatchL.GetComponent<RectTransform>();
+                slr.anchorMin = new Vector2(0.02f, 0.15f);
+                slr.anchorMax = new Vector2(0.13f, 0.85f);
+                slr.offsetMin = slr.offsetMax = Vector2.zero;
+                var swatchR = UIFactory.MakePanel(row.transform, "Right", theme.EnemySideTint);
+                var srr = swatchR.GetComponent<RectTransform>();
+                srr.anchorMin = new Vector2(0.13f, 0.15f);
+                srr.anchorMax = new Vector2(0.24f, 0.85f);
+                srr.offsetMin = srr.offsetMax = Vector2.zero;
+                var sky = UIFactory.MakePanel(row.transform, "Sky", theme.SkyTop);
+                var skr = sky.GetComponent<RectTransform>();
+                skr.anchorMin = new Vector2(0.24f, 0.15f);
+                skr.anchorMax = new Vector2(0.30f, 0.85f);
+                skr.offsetMin = skr.offsetMax = Vector2.zero;
+            }
 
             string suffix = current ? "  (СЕЙЧАС)" : (unlocked ? "" : "  ЗАБЛОКИРОВАНО");
             var name = UIFactory.MakeText(row.transform, "Name", theme.DisplayName + suffix,

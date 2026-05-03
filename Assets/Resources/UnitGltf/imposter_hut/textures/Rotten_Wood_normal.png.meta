@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: 21a55a34cb854d9b8afacd1f1c767911
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  textureType: 0
+  textureShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  npotScale: 1
+  isReadable: 0
+  streamingMipmaps: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  mipmapLimitGroupName:
+  pSDRemoveMatte: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:

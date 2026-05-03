@@ -133,11 +133,15 @@ namespace TrashRoyale.Combat
         }
 
         /// <summary>
-        /// Spawns one instance of the spawn-on-tick child card just in
+        /// Spawns ONE instance of the spawn-on-tick child unit just in
         /// front of the hut, biased toward enemy territory so units
         /// immediately walk down the lane instead of milling around the
-        /// hut. Falls through silently if the spawn-card id is missing
-        /// from the card database.
+        /// hut. Spawning a single unit (instead of respecting the source
+        /// card's <c>spawnCount</c>) is intentional: e.g. the Хата Sus
+        /// reuses the existing 4-imposter <c>amongus</c> card but should
+        /// only emit 1 imposter per 5s — otherwise the hut would dump
+        /// 4×8=32 imposters over its lifetime, which is way past CR
+        /// balance for a 3-elixir building.
         /// </summary>
         void SpawnTickedUnit()
         {
@@ -147,7 +151,9 @@ namespace TrashRoyale.Combat
             // doesn't intersect the building collider on the first frame.
             float dir = team == Team.Player ? 1f : -1f;
             Vector3 pos = transform.position + new Vector3(0f, 0f, dir * 0.6f);
-            UnitFactory.SpawnCard(data, team, pos);
+            // SpawnUnitsExact lets us force count=1 even though the
+            // source card (e.g. amongus) normally spawns 4.
+            UnitFactory.SpawnUnitsExact(data, team, pos, 1);
         }
 
         void DoAttack()
