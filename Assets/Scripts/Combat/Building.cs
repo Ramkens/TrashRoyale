@@ -28,6 +28,12 @@ namespace TrashRoyale.Combat
         HpBar _hpBar;
         float _deployTimer;
         Transform _deployRing;
+        // Spawner-on-tick state for huts (Imposter Hut, Furnace).
+        // When card.spawnOnTickInterval > 0 and card.spawnOnTickCardId is
+        // non-empty, the building emits one unit at that cadence. The
+        // first emission fires after the FIRST interval (not on deploy)
+        // so the player gets value from the building rather than instantly.
+        float _spawnTickCd;
 
         public void Init(CardData data, Team t)
         {
@@ -39,12 +45,13 @@ namespace TrashRoyale.Combat
             _retargetCd = 0f;
             _lifetime = data.lifetime > 0f ? data.lifetime : 30f;
             _deployTimer = data.deployTime;
+            _spawnTickCd = data.spawnOnTickInterval;
             CombatRegistry.Register(this);
             _hpBar = HpBar.Create(this,
                 t == Team.Player ? new Color(0.18f, 0.6f, 1f) : new Color(1f, 0.3f, 0.25f),
                 2.6f, 1.6f, /*showNumber*/ true);
             if (_deployTimer > 0f) BuildDeployRing();
-            AudioManager.PlayOneShot(card.voiceLine, transform.position);
+            AudioManager.PlayOneShot(card.voiceLine, transform.position, card.sfxVolume);
         }
 
         void BuildDeployRing()
@@ -95,6 +102,22 @@ namespace TrashRoyale.Combat
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
 
+            // Spawner huts (e.g. Imposter Hut): emit a fresh unit every
+            // `spawnOnTickInterval` seconds, indefinitely while we're
+            // alive. Independent of attack logic — a hut can both spawn
+            // imposters AND optionally have its own attack (for combo
+            // huts). Most huts have card.range = 0 so the target search
+            // below returns null and they simply spawn without firing.
+            if (card.spawnOnTickInterval > 0f && !string.IsNullOrEmpty(card.spawnOnTickCardId))
+            {
+                _spawnTickCd -= dt;
+                if (_spawnTickCd <= 0f)
+                {
+                    SpawnTickedUnit();
+                    _spawnTickCd = card.spawnOnTickInterval;
+                }
+            }
+
             if (_target == null || _target.isDead || _retargetCd <= 0f)
             {
                 _target = CombatRegistry.FindClosestEnemy(transform.position, team,
@@ -107,6 +130,24 @@ namespace TrashRoyale.Combat
                 DoAttack();
                 _attackCd = card.attackInterval;
             }
+        }
+
+        /// <summary>
+        /// Spawns one instance of the spawn-on-tick child card just in
+        /// front of the hut, biased toward enemy territory so units
+        /// immediately walk down the lane instead of milling around the
+        /// hut. Falls through silently if the spawn-card id is missing
+        /// from the card database.
+        /// </summary>
+        void SpawnTickedUnit()
+        {
+            var data = TrashRoyale.Core.CardDatabase.Get(card.spawnOnTickCardId);
+            if (data == null) return;
+            // Push the spawn one tile toward the enemy so the new unit
+            // doesn't intersect the building collider on the first frame.
+            float dir = team == Team.Player ? 1f : -1f;
+            Vector3 pos = transform.position + new Vector3(0f, 0f, dir * 0.6f);
+            UnitFactory.SpawnCard(data, team, pos);
         }
 
         void DoAttack()

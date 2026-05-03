@@ -134,6 +134,28 @@ namespace TrashRoyale.Net
                 if (data == null) return;
                 // remote player is on the opposite side, mirror Z
                 Vector3 worldPos = new Vector3(-x, 0, -z);
+                // Host-authoritative validation. Without this the guest
+                // can spam the same play in the 0.25s gap between
+                // snapshots: the host wouldn't deduct enemy elixir, the
+                // next snapshot would push the *un-deducted* elixir back
+                // to the guest, and the guest could keep spending the
+                // same pool over and over -> infinite-elixir exploit.
+                // Only the host runs this branch (guest also receives
+                // play echoes for its own plays — those are harmless and
+                // skipped because the host is the only authority).
+                if (!IsHost) return;
+                if (ArenaController.I != null &&
+                    !ArenaController.I.IsValidPlacement(Team.Enemy, worldPos, data))
+                {
+                    return;
+                }
+                if (!_match.EnemyElixir.TrySpend(data.elixirCost))
+                {
+                    // Guest tried to spend more elixir than the host
+                    // thinks they have. Drop the play silently — the
+                    // next snapshot will correct the guest's UI.
+                    return;
+                }
                 UnitFactory.SpawnCard(data, Team.Enemy, worldPos);
                 return;
             }

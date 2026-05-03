@@ -34,7 +34,7 @@ namespace TrashRoyale.Combat
             _renderers = GetComponentsInChildren<Renderer>();
             if (_deployTimer > 0f) BuildDeployRing();
             ApplyDeployVisual(0f);
-            AudioManager.PlayOneShot(card.voiceLine, transform.position);
+            AudioManager.PlayOneShot(card.voiceLine, transform.position, card.sfxVolume);
         }
 
         void BuildDeployRing()

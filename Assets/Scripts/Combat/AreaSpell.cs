@@ -17,7 +17,7 @@ namespace TrashRoyale.Combat
         /// </summary>
         public static void Cast(CardData spell, Vector3 center, Team caster)
         {
-            AudioManager.PlayOneShot(spell.voiceLine, center);
+            AudioManager.PlayOneShot(spell.voiceLine, center, spell.sfxVolume);
             if (spell.id == "fireball")
             {
                 var origin = ResolveSpellOrigin(caster, center);

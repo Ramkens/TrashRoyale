@@ -44,15 +44,16 @@ namespace TrashRoyale.Match
         // Per-card orientation correction applied BEFORE measuring bounds.
         // Sketchfab models authored Z-up or facing -Z look like they're lying
         // on their belly in Unity (Y-up, +Z forward); rotating fixes that.
-        // NOTE: pig walks horizontally on 4 legs (no -90° X needed) but the
-        // Sketchfab pig source has a built-in ~45° yaw offset baked into
-        // its mesh transform, so its nose ends up pointing left of forward.
-        // A pure-Y compensation untwists it without flipping it onto its back.
+        // The pig used to have a 45° yaw override here that was itself
+        // wrong — the gltf source matrix already converts Z-up to Y-up,
+        // so adding 45° on top tilted the pig sideways. We removed it;
+        // any further per-card tweak should be expressed via cards.json
+        // `modelEulerX/Y/Z` so designers can tune visually instead of
+        // editing this dictionary.
         static readonly Dictionary<string, Quaternion> OrientationOverride = new()
         {
             { "pocoyo",  Quaternion.Euler(-90f, 0f, 0f) },
             { "shrek",   Quaternion.Euler(-90f, 0f, 0f) },
-            { "pig",     Quaternion.Euler(0f, 45f, 0f) },
         };
 
         // Per-card additional fudge multiplier on top of auto-fit (e.g. tank
@@ -124,6 +125,7 @@ namespace TrashRoyale.Match
                 case "cannon": BuildCannon(go); break;
                 case "tesla":  BuildTesla(go); break;
                 case "totem":  BuildTotem(go); break;
+                case "imposter_hut": BuildImposterHut(go); break;
                 default:       BuildGenericBuilding(go); break;
             }
             return go;
@@ -153,7 +155,13 @@ namespace TrashRoyale.Match
             // 1) Per-card orientation correction so Z-up source models stand
             //    up. Applied to the model child; the outer root keeps a clean
             //    transform that Unit/Tower can rotate to face targets.
-            if (OrientationOverride.TryGetValue(card.id, out var rot))
+            //    Priority: cards.json `modelEulerX/Y/Z` (designer-tunable)
+            //    overrides the hardcoded OrientationOverride.
+            if (card.modelEulerX != 0f || card.modelEulerY != 0f || card.modelEulerZ != 0f)
+            {
+                inst.transform.localRotation = Quaternion.Euler(card.modelEulerX, card.modelEulerY, card.modelEulerZ);
+            }
+            else if (OrientationOverride.TryGetValue(card.id, out var rot))
             {
                 inst.transform.localRotation = rot;
             }
@@ -592,6 +600,32 @@ namespace TrashRoyale.Match
                 new Vector3(0f, 1.45f, 0f));
             Cube(go, new Color(0.95f, 0.85f, 0.5f), new Vector3(0.55f, 0.4f, 0.55f),
                 new Vector3(0f, 1.85f, 0f));
+        }
+
+        // Imposter Hut — sus red cube with a single porthole window and a
+        // pair of antennae, looking like a tiny Among Us spaceship-shed.
+        // Spawns Among Us imposters every few seconds.
+        static void BuildImposterHut(GameObject go)
+        {
+            // Floor pad
+            Cube(go, new Color(0.35f, 0.35f, 0.4f), new Vector3(1.6f, 0.18f, 1.6f),
+                new Vector3(0f, 0.09f, 0f));
+            // Hut body (red sus)
+            Cube(go, new Color(0.85f, 0.18f, 0.18f), new Vector3(1.3f, 1.1f, 1.3f),
+                new Vector3(0f, 0.73f, 0f));
+            // Roof — slightly darker dome cube
+            Cube(go, new Color(0.55f, 0.1f, 0.1f), new Vector3(1.05f, 0.35f, 1.05f),
+                new Vector3(0f, 1.45f, 0f));
+            // Porthole window (light blue)
+            Sphere(go, new Color(0.55f, 0.85f, 1f), 0.32f, new Vector3(0f, 0.95f, 0.66f));
+            Sphere(go, new Color(0.95f, 0.95f, 1f), 0.18f, new Vector3(0.05f, 1.0f, 0.78f));
+            // Antennae
+            Cube(go, new Color(0.2f, 0.2f, 0.22f), new Vector3(0.06f, 0.5f, 0.06f),
+                new Vector3(0.45f, 1.85f, 0f));
+            Sphere(go, new Color(0.95f, 0.85f, 0.2f), 0.1f, new Vector3(0.45f, 2.15f, 0f));
+            Cube(go, new Color(0.2f, 0.2f, 0.22f), new Vector3(0.06f, 0.4f, 0.06f),
+                new Vector3(-0.45f, 1.8f, 0f));
+            Sphere(go, new Color(0.95f, 0.4f, 0.4f), 0.1f, new Vector3(-0.45f, 2.05f, 0f));
         }
 
         static void BuildGenericBuilding(GameObject go)

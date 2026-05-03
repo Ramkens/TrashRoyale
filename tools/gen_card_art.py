@@ -243,12 +243,59 @@ def draw_doge_mage(img):
     d.ellipse((orb_cx - 12, orb_cy - 12, orb_cx + 12, orb_cy + 12), fill=(255, 255, 255, 255))
 
 
+def draw_imposter(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 360, 170, (255, 80, 80))
+    # Body — classic Among Us suit (red)
+    body = [(200, 320), (200, 480), (220, 540), (292, 540), (312, 480), (312, 350)]
+    d.polygon(body, fill=(190, 30, 30, 255), outline=(70, 10, 10, 255))
+    # Helmet
+    d.ellipse((196, 240, 316, 380), fill=(190, 30, 30, 255), outline=(70, 10, 10, 255), width=4)
+    # Visor — light cyan glass
+    d.ellipse((216, 280, 316, 350), fill=(140, 220, 240, 255), outline=(40, 80, 110, 255), width=4)
+    d.ellipse((250, 290, 308, 320), fill=(220, 245, 255, 255))
+    # Backpack
+    rounded_rect(d, (172, 360, 200, 460), 8, fill=(150, 20, 20, 255), outline=(60, 10, 10, 255), width=3)
+    # Knife
+    d.polygon([(316, 360), (380, 320), (390, 340), (326, 384)], fill=(220, 220, 230, 255), outline=(120, 120, 130, 255))
+    rounded_rect(d, (320, 380, 400, 396), 4, fill=(80, 50, 30, 255), outline=(40, 25, 15, 255), width=2)
+    # "sus" label
+    f = find_font(40)
+    d.text((226, 552), "sus", fill=(255, 230, 90, 255), font=f, stroke_width=3, stroke_fill=(40, 0, 0, 255))
+
+
+def draw_imposter_hut(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 380, 170, (255, 100, 100))
+    # Floor pad
+    rounded_rect(d, (140, 500, 372, 545), 10, fill=(70, 70, 80, 255), outline=(30, 30, 40, 255), width=3)
+    # Hut body — red sus
+    rounded_rect(d, (170, 320, 342, 510), 22, fill=(190, 30, 30, 255), outline=(70, 10, 10, 255), width=4)
+    # Roof — dome
+    d.ellipse((180, 270, 332, 360), fill=(140, 18, 18, 255), outline=(60, 8, 8, 255), width=4)
+    # Porthole
+    d.ellipse((216, 360, 296, 440), fill=(140, 220, 240, 255), outline=(40, 80, 110, 255), width=5)
+    d.ellipse((232, 376, 280, 414), fill=(220, 245, 255, 255))
+    # Door
+    rounded_rect(d, (244, 450, 268, 510), 6, fill=(70, 18, 18, 255), outline=(30, 5, 5, 255), width=3)
+    # Antennae
+    d.line((300, 270, 320, 200), fill=(40, 40, 50, 255), width=6)
+    d.ellipse((312, 188, 332, 208), fill=(255, 220, 80, 255), outline=(140, 110, 20, 255), width=2)
+    d.line((212, 270, 198, 220), fill=(40, 40, 50, 255), width=6)
+    d.ellipse((188, 208, 208, 228), fill=(255, 100, 100, 255), outline=(140, 30, 30, 255), width=2)
+    # Sus label on door
+    f = find_font(28)
+    d.text((212, 540), "хижина sus", fill=(255, 230, 90, 255), font=f, stroke_width=2, stroke_fill=(40, 0, 0, 255))
+
+
 DRAWERS = {
     "cannon": draw_cannon,
     "tesla": draw_tesla,
     "totem": draw_totem,
     "bomber": draw_bomber,
     "doge_mage": draw_doge_mage,
+    "imposter": draw_imposter,
+    "imposter_hut": draw_imposter_hut,
 }
 
 
@@ -263,7 +310,7 @@ def make_card(card):
 def main():
     data = json.load(open(CARDS_JSON, encoding="utf-8"))
     by_id = {c["id"]: c for c in data["cards"]}
-    targets = ["cannon", "tesla", "totem", "bomber", "doge_mage"]
+    targets = ["cannon", "tesla", "totem", "bomber", "doge_mage", "imposter", "imposter_hut"]
     for cid in targets:
         if cid not in by_id:
             print("missing card metadata for", cid)
