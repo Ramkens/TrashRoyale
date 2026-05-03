@@ -85,6 +85,11 @@ namespace TrashRoyale.Combat
                 return;
             }
 
+            // Without ticking these, a building frozen by Freeze /
+            // Lightning would stay stunRemaining > 0 forever and never
+            // attack or spawn again.
+            if (stunRemaining > 0f) stunRemaining -= dt;
+
             if (_deployTimer > 0f)
             {
                 _deployTimer -= dt;
@@ -101,6 +106,11 @@ namespace TrashRoyale.Combat
 
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
+
+            // While frozen, the building can't attack OR spawn its
+            // hut tick. Cooldowns still tick (above) so it doesn't
+            // catch up on missed attacks the instant the stun ends.
+            if (stunRemaining > 0f) return;
 
             // Spawner huts (e.g. Imposter Hut): emit a fresh unit every
             // `spawnOnTickInterval` seconds, indefinitely while we're

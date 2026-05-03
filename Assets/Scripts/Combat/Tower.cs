@@ -39,8 +39,15 @@ namespace TrashRoyale.Combat
         {
             if (isDead || !isActive) return;
             float dt = Time.deltaTime;
+            // Without ticking these, a tower frozen by Freeze / Lightning
+            // would stay stunRemaining > 0 forever, never re-attack.
+            if (stunRemaining > 0f) stunRemaining -= dt;
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
+            // Freeze / Lightning lock the tower out of attacking but
+            // still let cooldowns tick so it doesn't fire instantly the
+            // moment the stun ends.
+            if (stunRemaining > 0f) return;
             if (_target == null || _target.isDead || _retargetCd <= 0f)
             {
                 _target = CombatRegistry.FindClosestEnemy(transform.position, team, range, false, true);
@@ -55,6 +62,22 @@ namespace TrashRoyale.Combat
         }
 
         public void Activate() => isActive = true;
+
+        /// <summary>
+        /// CR rule: the king tower wakes up the moment it takes any
+        /// damage, not only when an adjacent crown tower falls. Without
+        /// this override, players can chip the enemy king with spells
+        /// (fireball / lightning / poison) while both crowns are still
+        /// alive, and the king never shoots back.
+        /// </summary>
+        public override void TakeDamage(float dmg, Damageable source = null)
+        {
+            base.TakeDamage(dmg, source);
+            if (isKing && !isActive && !isDead)
+            {
+                Activate();
+            }
+        }
 
         protected override void OnDeath()
         {
