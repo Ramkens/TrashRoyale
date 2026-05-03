@@ -26,6 +26,11 @@ namespace TrashRoyale.Combat
         // Reflect: 0..1 fraction of incoming damage echoed back at the
         // source. Set per card during Init.
         public float reflectFraction;
+        // Rage buff timer set by the rage_spell zone. While > 0 the
+        // Unit / Tower scales movement & attack speed by RageMultiplier.
+        // Decremented in Unit.Update; spells refresh it via TickZone.
+        public float rageRemaining;
+        public const float RageMultiplier = 1.35f;
 
         public virtual void Init(Team t, float maxHpValue)
         {

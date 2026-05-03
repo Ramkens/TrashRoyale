@@ -288,6 +288,48 @@ def draw_imposter_hut(img):
     d.text((212, 540), "хижина sus", fill=(255, 230, 90, 255), font=f, stroke_width=2, stroke_fill=(40, 0, 0, 255))
 
 
+def draw_generic_meme(img, card):
+    """Fallback art for cards without a hand-drawn illustration.
+
+    Produces a flat-shaded silhouette with hue derived from the card id
+    so each character at least visually differs in the hand. Adds a
+    pair of eyes + a meme-style initial inside a circular crest. This is
+    intentionally cartoony — it's better than the prior “nothing” state
+    while we wait for proper art / Sketchfab portraits.
+    """
+    d = ImageDraw.Draw(img)
+    seed = sum(ord(c) for c in card.get("id", "x")) % 360
+    # HSV-ish hue rotation: pick a saturated colour based on the id.
+    import colorsys
+    r1, g1, b1 = colorsys.hsv_to_rgb((seed % 360) / 360.0, 0.7, 0.95)
+    r2, g2, b2 = colorsys.hsv_to_rgb(((seed + 60) % 360) / 360.0, 0.85, 0.6)
+    primary = (int(r1 * 255), int(g1 * 255), int(b1 * 255), 255)
+    shadow = (int(r2 * 255), int(g2 * 255), int(b2 * 255), 255)
+    draw_glow(img, W / 2, 380, 180, primary[:3])
+    # Round badge body.
+    cx, cy, cr = W // 2, 380, 130
+    d.ellipse((cx - cr, cy - cr, cx + cr, cy + cr), fill=primary, outline=(40, 30, 80, 255), width=6)
+    # Inner highlight crescent.
+    d.ellipse((cx - cr + 22, cy - cr + 18, cx + cr - 60, cy - cr + 110), fill=(255, 255, 255, 70))
+    # Eyes — placement varies by hash so different cards look different.
+    eye_dx = 26 + (seed % 16)
+    eye_y = cy - 12
+    for sign in (-1, 1):
+        d.ellipse((cx + sign * eye_dx - 18, eye_y - 18, cx + sign * eye_dx + 18, eye_y + 18), fill=(255, 255, 255, 255), outline=(20, 20, 20, 255), width=3)
+        d.ellipse((cx + sign * eye_dx - 8, eye_y - 6, cx + sign * eye_dx + 8, eye_y + 10), fill=(20, 20, 20, 255))
+    # Mouth: zigzag shape, varies per id.
+    mouth = [(cx - 50, cy + 36), (cx - 30, cy + 56), (cx - 10, cy + 36), (cx + 10, cy + 56), (cx + 30, cy + 36), (cx + 50, cy + 56)]
+    d.line(mouth, fill=(40, 20, 30, 255), width=8)
+    # Crest letter (first letter of id, uppercase) inside a tilted ribbon.
+    f = find_font(56)
+    letter = (card.get("id", "?")[:1] or "?").upper()
+    rounded_rect(d, (cx - 72, cy + 120, cx + 72, cy + 196), 18, fill=shadow, outline=GOLD + (255,), width=4)
+    bb = d.textbbox((0, 0), letter, font=f)
+    bw = bb[2] - bb[0]
+    bh = bb[3] - bb[1]
+    d.text((cx - bw / 2 - 2, cy + 120 + (76 - bh) / 2 - 8), letter, font=f, fill=GOLD_LIGHT + (255,))
+
+
 DRAWERS = {
     "cannon": draw_cannon,
     "tesla": draw_tesla,
@@ -304,21 +346,32 @@ def make_card(card):
     draw_fn = DRAWERS.get(card["id"])
     if draw_fn:
         draw_fn(img)
+    else:
+        draw_generic_meme(img, card)
     return img
 
 
 def main():
     data = json.load(open(CARDS_JSON, encoding="utf-8"))
-    by_id = {c["id"]: c for c in data["cards"]}
-    targets = ["cannon", "tesla", "totem", "bomber", "doge_mage", "imposter_hut"]
-    for cid in targets:
-        if cid not in by_id:
-            print("missing card metadata for", cid)
-            continue
-        img = make_card(by_id[cid])
+    cards = data["cards"]
+    os.makedirs(OUT_DIR, exist_ok=True)
+    # Only generate art for cards that DON'T already have a PNG, OR that
+    # have a dedicated `DRAWERS` entry (those are the ones we trust the
+    # script to render correctly). This protects hand-drawn portraits
+    # from being trampled by the generic fallback.
+    written = 0
+    skipped = 0
+    for c in cards:
+        cid = c["id"]
         out = os.path.join(OUT_DIR, cid + ".png")
+        has_drawer = cid in DRAWERS
+        if os.path.exists(out) and not has_drawer:
+            skipped += 1
+            continue
+        img = make_card(c)
         img.save(out)
-        print("wrote", out)
+        written += 1
+    print(f"wrote {written} card art PNGs (kept {skipped} hand-drawn) to {OUT_DIR}")
 
 
 if __name__ == "__main__":

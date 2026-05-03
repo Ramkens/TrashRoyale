@@ -91,10 +91,11 @@ namespace TrashRoyale.Combat
             if (isDead) return;
             float dt = Time.deltaTime;
 
-            // Tick down phase / stun timers regardless of deploy state
-            // so freeze spells thrown on a deploying unit still wear off.
+            // Tick down phase / stun / rage timers regardless of deploy
+            // state so spells thrown on a deploying unit still resolve.
             if (phaseImmuneRemaining > 0f) phaseImmuneRemaining -= dt;
             if (stunRemaining > 0f) stunRemaining -= dt;
+            if (rageRemaining > 0f) rageRemaining -= dt;
 
             if (_deployTimer > 0f)
             {
@@ -162,7 +163,11 @@ namespace TrashRoyale.Combat
                 if (_attackCd <= 0f)
                 {
                     DoAttack();
-                    _attackCd = card.attackInterval;
+                    // Rage cuts the cooldown so allied units swing
+                    // faster while inside an active rage zone.
+                    float interval = card.attackInterval;
+                    if (rageRemaining > 0f) interval /= RageMultiplier;
+                    _attackCd = interval;
                     // Charge consumed on hit; rebuild from scratch.
                     _chargeBuiltSeconds = 0f;
                     _chargeReady = false;
@@ -212,7 +217,9 @@ namespace TrashRoyale.Combat
 
         void Move(Vector3 dir, float dt)
         {
-            transform.position += dir * card.moveSpeed * dt;
+            float speed = card.moveSpeed;
+            if (rageRemaining > 0f) speed *= RageMultiplier;
+            transform.position += dir * speed * dt;
             if (dir.sqrMagnitude > 0.001f)
             {
                 var look = Quaternion.LookRotation(new Vector3(dir.x, 0f, dir.z));
