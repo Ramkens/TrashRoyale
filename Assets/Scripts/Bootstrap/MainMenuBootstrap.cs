@@ -7,6 +7,7 @@ using TrashRoyale.Audio;
 using TrashRoyale.Persistence;
 using TrashRoyale.UI;
 using TrashRoyale.Core;
+using TrashRoyale.Match;
 using TrashRoyale.Net;
 
 namespace TrashRoyale.Bootstrap
