@@ -115,13 +115,16 @@ namespace TrashRoyale.Bootstrap
             }
             if (btnSp != null) { banner.sprite = btnSp; banner.type = Image.Type.Sliced; banner.color = bannerColor; }
 
-            // Click whole banner to edit nick
+            // Tap the banner area to open the unified profile screen
+            // (nick / banner / achievements / road to glory / account
+            // binding all live there). Trophy zone keeps its own hit
+            // area for "Дорога Славы".
             var bannerBtn = banner.gameObject.AddComponent<Button>();
             bannerBtn.targetGraphic = banner;
             bannerBtn.onClick.AddListener(() =>
             {
                 AudioManager.PlaySfx("click");
-                NicknamePopup.Open(_canvas.transform, _profile, RefreshBanner);
+                ProfilePopup.Open(_canvas.transform, _profile, RefreshBanner);
             });
 
             // Medals strip — small icons of unlocked achievements,
