@@ -22,18 +22,29 @@ namespace TrashRoyale.Match
     public static class ModelLoader
     {
         // Map card id -> prefab name in Resources/UnitGltf. Some folders use
-        // the sketchfab-suffixed name (skibidi_cameraman).
+        // the sketchfab-suffixed name (skibidi_cameraman). New entries
+        // are appended as we wire up Sketchfab CC-BY meshes for new
+        // meme units; keeping them in this map lets InstantiateUnit pick
+        // the real glTF prefab instead of the primitive fallback.
         static readonly Dictionary<string, string> PrefabName = new()
         {
-            { "knight",   "knight"   },
-            { "pig",      "pig"      },
-            { "skibidi",  "skibidi_cameraman" },
-            { "pocoyo",   "pocoyo"   },
-            { "amongus",  "amongus"  },
-            { "cheems",   "cheems"   },
-            { "shrek",    "shrek"    },
-            { "gigachad", "gigachad" },
-            { "nyancat",  "nyancat"  },
+            { "knight",          "knight"          },
+            { "pig",             "pig"             },
+            { "skibidi",         "skibidi_cameraman" },
+            { "pocoyo",          "pocoyo"          },
+            { "amongus",         "amongus"         },
+            { "cheems",          "cheems"          },
+            { "shrek",           "shrek"           },
+            { "gigachad",        "gigachad"        },
+            { "nyancat",         "nyancat"         },
+            { "capybara",        "capybara"        },
+            { "skuf",            "skuf"            },
+            { "slender",         "slender"         },
+            { "streamer_girl",   "streamer_girl"   },
+            { "john_pork",       "john_pork"       },
+            { "pepe_mage",       "pepe_mage"       },
+            { "putin_cat",       "putin_cat"       },
+            { "ronald_siu",      "ronald_siu"      },
         };
 
         // Target world-space height in arena units (~meters). Towers are ~3.2u
@@ -122,7 +133,8 @@ namespace TrashRoyale.Match
         // identically for units and buildings).
         static readonly Dictionary<string, string> BuildingPrefabName = new()
         {
-            { "imposter_hut", "imposter_hut" },
+            { "imposter_hut",  "imposter_hut"  },
+            { "inferno_tower", "inferno_tower" },
         };
 
         public static GameObject InstantiateBuilding(CardData card)
