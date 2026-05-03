@@ -1,249 +1,278 @@
-#!/usr/bin/env python3
-"""
-Generate Clash Royale-style card images:
-- Gold-framed rectangle with elixir cost bubble (top-left)
-- Card art in middle (use Sketchfab thumbnail as base)
-- Card name banner (bottom)
-- Output PNG sized for Unity import (512x768)
-"""
+"""Procedural card-art generator for new units.
 
-import io
-import os
+Style mirrors the existing CardArt PNGs: 512x768 RGBA portrait card with
+a deep purple border, rounded gold inset frame, elixir cost circle in
+the top-left, name banner at the bottom, and a stylized illustration of
+the unit in the central area.
+
+Reads card metadata from Assets/Resources/Cards/cards.json so cost and
+display name stay in sync.
+"""
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import json
-import sys
-import urllib.request
-from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+import os
+import math
 
-ROOT = Path(__file__).resolve().parent.parent
-CARDS_JSON = ROOT / "Assets/Resources/Cards/cards.json"
-OUT = ROOT / "Assets/Resources/CardArt"
-OUT.mkdir(parents=True, exist_ok=True)
+W, H = 512, 768
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CARDS_JSON = os.path.join(ROOT, "Assets/Resources/Cards/cards.json")
+OUT_DIR = os.path.join(ROOT, "Assets/Resources/CardArt")
 
-SKETCHFAB_TOKEN = os.environ.get("SKETCHFAB_API_TOKEN", "")
-
-# Maps card.id to a Sketchfab model UID for thumbnail fetch
-SF_THUMBS = {
-    "knight":             "0722db29739c4a278651769c3ec3d05e",
-    "pig":                "26ae14bd0d2b4650b4bf878ca85ad06a",
-    "skibidi":            "62ea2ffb7d37476e8e5f3e93c2ef5aea",
-    "pocoyo":             "16c09e971fe7494790b2f5daa5e065e5",
-    "amongus":            "428bb9a3637e458c8336e4a7aefd4e3d",
-    "cheems":             "912a6ee6504b4b7a8b0226000e01cdea",
-    "shrek":              "ff6a111c58c94d328b0880a38b912428",
-    "gigachad":           "405a54167dfc439d937973bab248ea26",
-    "nyancat":            "7841f5567aa34453b596e81e12a76e45",
-}
-
-# Local image overrides (take priority over Sketchfab)
-LOCAL_ART = {
-    "fireball": str(ROOT / "_assets/fireball_user.png"),
-}
-
-CARD_W, CARD_H = 512, 768
-ART_PAD = 24
-ART_TOP = 96
-ART_BOTTOM = 200
-NAME_BG_COLOR = (60, 30, 130, 235)
-FRAME_COLOR = (220, 180, 60)
-INNER_BG_TOP = (46, 60, 120)
-INNER_BG_BOTTOM = (24, 28, 60)
-ELIXIR_OUTER = (180, 50, 200)
-ELIXIR_INNER = (245, 100, 230)
+PURPLE_DARK = (51, 33, 110)
+PURPLE_BORDER = (37, 23, 86)
+GOLD = (218, 174, 65)
+GOLD_LIGHT = (255, 220, 130)
+SCENE_TOP = (50, 38, 100)
+SCENE_BOTTOM = (24, 17, 56)
+NAME_BG = (51, 33, 110)
+ELIXIR_PINK = (227, 65, 184)
 
 
-def font(size):
+def find_font(size):
     candidates = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     ]
-    for c in candidates:
-        if os.path.exists(c):
-            return ImageFont.truetype(c, size)
+    for p in candidates:
+        if os.path.isfile(p):
+            return ImageFont.truetype(p, size)
     return ImageFont.load_default()
 
 
-def fetch_thumb(uid):
-    if not SKETCHFAB_TOKEN:
-        return None
-    try:
-        req = urllib.request.Request(
-            f"https://api.sketchfab.com/v3/models/{uid}",
-            headers={"Authorization": f"Token {SKETCHFAB_TOKEN}"},
-        )
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        thumbs = data.get("thumbnails", {}).get("images", [])
-        if not thumbs:
-            return None
-        thumbs = sorted(thumbs, key=lambda x: -x.get("width", 0))
-        url = thumbs[0]["url"]
-        with urllib.request.urlopen(url, timeout=20) as r:
-            return Image.open(io.BytesIO(r.read())).convert("RGBA")
-    except Exception as e:
-        print(f"  thumb fetch failed: {e}")
-        return None
+def rounded_rect(draw, box, radius, fill=None, outline=None, width=1):
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
-def gradient_fill(width, height, top_color, bottom_color):
-    img = Image.new("RGBA", (width, height))
+def make_scene_gradient():
+    img = Image.new("RGB", (W, H), SCENE_BOTTOM)
     px = img.load()
-    for y in range(height):
-        t = y / max(1, height - 1)
-        r = int(top_color[0] * (1 - t) + bottom_color[0] * t)
-        g = int(top_color[1] * (1 - t) + bottom_color[1] * t)
-        b = int(top_color[2] * (1 - t) + bottom_color[2] * t)
-        for x in range(width):
-            px[x, y] = (r, g, b, 255)
+    for y in range(H):
+        t = y / (H - 1)
+        r = int(SCENE_TOP[0] + (SCENE_BOTTOM[0] - SCENE_TOP[0]) * t)
+        g = int(SCENE_TOP[1] + (SCENE_BOTTOM[1] - SCENE_TOP[1]) * t)
+        b = int(SCENE_TOP[2] + (SCENE_BOTTOM[2] - SCENE_TOP[2]) * t)
+        for x in range(W):
+            px[x, y] = (r, g, b)
     return img
 
 
-def round_rect_mask(size, radius):
-    mask = Image.new("L", size, 0)
-    d = ImageDraw.Draw(mask)
-    d.rounded_rectangle((0, 0, size[0] - 1, size[1] - 1), radius=radius, fill=255)
-    return mask
+def draw_frame(card):
+    base = Image.new("RGBA", (W, H), PURPLE_BORDER + (255,))
+    bd = ImageDraw.Draw(base)
+    rounded_rect(bd, (8, 8, W - 8, H - 8), 36, fill=PURPLE_BORDER + (255,), outline=GOLD + (255,), width=6)
+    rounded_rect(bd, (24, 100, W - 24, H - 160), 28, fill=SCENE_TOP + (255,))
+    scene = make_scene_gradient().convert("RGBA")
+    mask = Image.new("L", (W, H), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle((24, 100, W - 24, H - 160), 28, fill=255)
+    base.paste(scene, (0, 0), mask)
+    bd2 = ImageDraw.Draw(base)
+    rounded_rect(bd2, (24, 100, W - 24, H - 160), 28, outline=GOLD + (255,), width=4)
+    rounded_rect(bd2, (40, H - 150, W - 40, H - 28), 22, fill=NAME_BG + (255,), outline=GOLD + (255,), width=4)
 
-
-def draw_card(card):
-    cid = card["id"]
-    name = card["displayName"]
-    cost = card["elixirCost"]
+    name_font = find_font(48)
+    desc_font = find_font(20)
+    name = card.get("displayName", card["id"])
+    bbox = bd2.textbbox((0, 0), name, font=name_font)
+    nw = bbox[2] - bbox[0]
+    nh = bbox[3] - bbox[1]
+    bd2.text(((W - nw) / 2, H - 142), name, font=name_font, fill=GOLD_LIGHT + (255,))
     desc = card.get("description", "")
-
-    # Base card
-    card_img = Image.new("RGBA", (CARD_W, CARD_H), (0, 0, 0, 0))
-
-    # Outer rounded frame
-    bg = gradient_fill(CARD_W, CARD_H, INNER_BG_TOP, INNER_BG_BOTTOM)
-    bg = Image.composite(bg, Image.new("RGBA", (CARD_W, CARD_H), (0, 0, 0, 0)),
-                         round_rect_mask((CARD_W, CARD_H), 48))
-    card_img.alpha_composite(bg)
-
-    # Gold frame border
-    frame = Image.new("RGBA", (CARD_W, CARD_H), (0, 0, 0, 0))
-    fd = ImageDraw.Draw(frame)
-    fd.rounded_rectangle((6, 6, CARD_W - 7, CARD_H - 7), radius=44, outline=FRAME_COLOR, width=10)
-    fd.rounded_rectangle((22, 22, CARD_W - 23, CARD_H - 23), radius=32, outline=(255, 230, 100), width=3)
-    card_img.alpha_composite(frame)
-
-    # Art region
-    art_w = CARD_W - ART_PAD * 2
-    art_h = CARD_H - ART_TOP - ART_BOTTOM
-    art_box = Image.new("RGBA", (art_w, art_h), (255, 255, 255, 255))
-    thumb = None
-    local = LOCAL_ART.get(cid)
-    if local and os.path.exists(local):
-        try:
-            thumb = Image.open(local).convert("RGBA")
-        except Exception as e:
-            print(f"  local art load failed: {e}")
-    if thumb is None:
-        uid = SF_THUMBS.get(cid)
-        if uid:
-            thumb = fetch_thumb(uid)
-    if thumb is None:
-        # Procedural fallback fill
-        proc = gradient_fill(art_w, art_h, (90, 130, 200), (30, 60, 130))
-        art_box.paste(proc, (0, 0))
-        d2 = ImageDraw.Draw(art_box)
-        glyph = {
-            "knight": "⚔",
-            "pig": "🐷",
-            "skibidi": "📺",
-            "pocoyo": "🎉",
-            "amongus": "🚀",
-            "cheems": "🐶",
-            "shrek": "🌳",
-            "gigachad": "💪",
-            "nyancat": "🌈",
-            "fireball": "🔥",
-        }.get(cid, "?")
-        d2.text((art_w // 2, art_h // 2), glyph, anchor="mm", fill=(255, 255, 255), font=font(220))
-    else:
-        # Resize keeping aspect, cover the art rect
-        ratio = max(art_w / thumb.width, art_h / thumb.height)
-        nw = int(thumb.width * ratio)
-        nh = int(thumb.height * ratio)
-        thumb = thumb.resize((nw, nh), Image.LANCZOS)
-        cx = (nw - art_w) // 2
-        cy = (nh - art_h) // 2
-        thumb = thumb.crop((cx, cy, cx + art_w, cy + art_h))
-        art_box = thumb.convert("RGBA")
-
-    art_masked = Image.composite(art_box,
-                                 Image.new("RGBA", (art_w, art_h), (0, 0, 0, 0)),
-                                 round_rect_mask((art_w, art_h), 24))
-    card_img.alpha_composite(art_masked, (ART_PAD, ART_TOP))
-
-    # Inner border on art
-    di = ImageDraw.Draw(card_img)
-    di.rounded_rectangle((ART_PAD - 2, ART_TOP - 2, ART_PAD + art_w + 1, ART_TOP + art_h + 1),
-                         radius=24, outline=FRAME_COLOR, width=4)
-
-    # Name banner
-    banner_h = 90
-    banner_y = CARD_H - ART_BOTTOM + 20
-    di.rounded_rectangle((30, banner_y, CARD_W - 30, banner_y + banner_h),
-                         radius=20, fill=NAME_BG_COLOR, outline=FRAME_COLOR, width=4)
-    f_name = font(50)
-    # adjust if too long
-    while di.textlength(name, font=f_name) > CARD_W - 100 and f_name.size > 20:
-        f_name = font(f_name.size - 4)
-    di.text((CARD_W // 2, banner_y + banner_h // 2), name,
-            anchor="mm", fill=(255, 235, 150), font=f_name)
-
-    # Description (small)
-    f_desc = font(20)
-    desc_y = banner_y + banner_h + 16
-    wrap_lines = wrap_text(desc, f_desc, CARD_W - 60, di)
-    for i, line in enumerate(wrap_lines[:3]):
-        di.text((CARD_W // 2, desc_y + i * 22), line, anchor="mm",
-                fill=(220, 220, 250), font=f_desc)
-
-    # Elixir bubble (top-left)
-    bubble_d = 130
-    bx, by = -10, -10
-    bd_layer = Image.new("RGBA", (CARD_W, CARD_H), (0, 0, 0, 0))
-    bd = ImageDraw.Draw(bd_layer)
-    bd.ellipse((bx, by, bx + bubble_d, by + bubble_d), fill=ELIXIR_OUTER, outline=FRAME_COLOR, width=6)
-    bd.ellipse((bx + 18, by + 18, bx + bubble_d - 18, by + bubble_d - 18), fill=ELIXIR_INNER)
-    f_cost = font(70)
-    bd.text((bx + bubble_d // 2, by + bubble_d // 2), str(cost), anchor="mm", fill="white", font=f_cost)
-    card_img.alpha_composite(bd_layer)
-
-    return card_img
-
-
-def wrap_text(text, fnt, max_w, draw):
-    words = (text or "").split()
-    lines = []
-    cur = ""
-    for w in words:
-        trial = (cur + " " + w).strip()
-        if draw.textlength(trial, font=fnt) <= max_w:
-            cur = trial
-        else:
-            if cur:
+    if desc:
+        words = desc.split()
+        lines = []
+        cur = ""
+        max_w = W - 100
+        for w in words:
+            trial = (cur + " " + w).strip()
+            tb = bd2.textbbox((0, 0), trial, font=desc_font)
+            if tb[2] - tb[0] > max_w and cur:
                 lines.append(cur)
-            cur = w
-    if cur:
-        lines.append(cur)
-    return lines
+                cur = w
+            else:
+                cur = trial
+        if cur:
+            lines.append(cur)
+        lines = lines[:2]
+        y = H - 80
+        for ln in lines:
+            tb = bd2.textbbox((0, 0), ln, font=desc_font)
+            tw = tb[2] - tb[0]
+            bd2.text(((W - tw) / 2, y), ln, font=desc_font, fill=(220, 220, 240, 255))
+            y += 24
+
+    cost = card.get("elixirCost", 0)
+    cx, cy, cr = 60, 70, 50
+    bd2.ellipse((cx - cr, cy - cr, cx + cr, cy + cr), fill=ELIXIR_PINK + (255,), outline=(255, 255, 255, 255), width=4)
+    cost_font = find_font(56)
+    bb = bd2.textbbox((0, 0), str(cost), font=cost_font)
+    bw = bb[2] - bb[0]
+    bh = bb[3] - bb[1]
+    bd2.text((cx - bw / 2 - 2, cy - bh / 2 - 12), str(cost), font=cost_font, fill=(255, 255, 255, 255))
+    return base
+
+
+def draw_glow(img, cx, cy, radius, color):
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    d.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=color + (90,))
+    layer = layer.filter(ImageFilter.GaussianBlur(28))
+    img.alpha_composite(layer)
+
+
+def draw_cannon(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 380, 150, (255, 170, 60))
+    base = (160, 470, 352, 540)
+    rounded_rect(d, base, 16, fill=(110, 90, 60, 255), outline=(60, 45, 25, 255), width=4)
+    body = (180, 360, 332, 470)
+    rounded_rect(d, body, 18, fill=(150, 122, 80, 255), outline=(80, 60, 35, 255), width=4)
+    d.rectangle((196, 388, 316, 408), fill=(80, 60, 35, 255))
+    d.rectangle((196, 432, 316, 452), fill=(80, 60, 35, 255))
+    barrel = (236, 220, 276, 380)
+    rounded_rect(d, barrel, 18, fill=(56, 56, 64, 255), outline=(28, 28, 36, 255), width=4)
+    d.ellipse((220, 200, 292, 240), fill=(36, 36, 44, 255), outline=(20, 20, 28, 255), width=4)
+    d.ellipse((232, 188, 280, 230), fill=(220, 110, 30, 255))
+    d.ellipse((242, 180, 270, 220), fill=(255, 220, 90, 255))
+    for i, dx in enumerate((-30, 30)):
+        d.line((256 + dx * 0.4, 200 - 20, 256 + dx, 160 - i * 10), fill=(255, 200, 60, 255), width=4)
+
+
+def draw_tesla(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 380, 180, (140, 200, 255))
+    base = (170, 480, 342, 540)
+    rounded_rect(d, base, 14, fill=(70, 70, 90, 255), outline=(30, 30, 50, 255), width=4)
+    for i, (y0, y1, w_inset) in enumerate([(440, 480, 28), (390, 440, 38), (340, 390, 48), (290, 340, 58)]):
+        rounded_rect(d, (170 + w_inset, y0, 342 - w_inset, y1), 10, fill=(110, 130, 170, 255), outline=(40, 60, 100, 255), width=3)
+    coil_cx, coil_cy = 256, 270
+    for r in (60, 48, 36, 24):
+        d.ellipse((coil_cx - r, coil_cy - r * 0.3, coil_cx + r, coil_cy + r * 0.3), outline=(180, 220, 255, 255), width=4)
+    d.ellipse((coil_cx - 18, coil_cy - 28, coil_cx + 18, coil_cy + 8), fill=(255, 255, 255, 255))
+    pts = [
+        [(coil_cx, 250), (236, 200), (256, 180), (220, 130)],
+        [(coil_cx, 250), (276, 210), (260, 170), (300, 140)],
+    ]
+    for poly in pts:
+        d.line(poly, fill=(180, 230, 255, 255), width=6, joint="curve")
+        d.line(poly, fill=(255, 255, 255, 255), width=2, joint="curve")
+
+
+def draw_totem(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 380, 160, (140, 220, 140))
+    base = (170, 500, 342, 540)
+    rounded_rect(d, base, 14, fill=(80, 65, 50, 255), outline=(40, 30, 20, 255), width=4)
+    blocks = [
+        (190, 410, 322, 500, (130, 110, 90)),
+        (200, 320, 312, 410, (160, 140, 120)),
+        (210, 230, 302, 320, (130, 110, 90)),
+    ]
+    for box in blocks:
+        x0, y0, x1, y1, col = box
+        rounded_rect(d, (x0, y0, x1, y1), 10, fill=col + (255,), outline=(50, 40, 30, 255), width=3)
+    d.polygon([(220, 230), (256, 200), (292, 230)], fill=(160, 140, 120, 255), outline=(50, 40, 30, 255))
+    d.ellipse((230, 350, 258, 380), fill=(255, 255, 255, 255))
+    d.ellipse((254, 350, 282, 380), fill=(255, 255, 255, 255))
+    d.ellipse((236, 358, 252, 374), fill=(40, 30, 30, 255))
+    d.ellipse((260, 358, 276, 374), fill=(40, 30, 30, 255))
+    d.polygon([(228, 440), (284, 440), (256, 480)], fill=(60, 30, 30, 255))
+    for fang in [(244, 440, 252, 460), (260, 440, 268, 460)]:
+        d.polygon([(fang[0], fang[1]), (fang[2], fang[1]), ((fang[0] + fang[2]) / 2, fang[3])], fill=(255, 255, 240, 255))
+
+
+def draw_bomber(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 360, 160, (255, 180, 70))
+    body = (200, 360, 320, 500)
+    rounded_rect(d, body, 30, fill=(120, 180, 90, 255), outline=(60, 100, 50, 255), width=4)
+    d.ellipse((210, 250, 310, 360), fill=(150, 200, 110, 255), outline=(60, 100, 50, 255), width=4)
+    d.polygon([(208, 270), (220, 230), (235, 268)], fill=(150, 200, 110, 255), outline=(60, 100, 50, 255))
+    d.polygon([(285, 268), (300, 230), (312, 270)], fill=(150, 200, 110, 255), outline=(60, 100, 50, 255))
+    d.ellipse((232, 290, 252, 318), fill=(255, 255, 255, 255))
+    d.ellipse((268, 290, 288, 318), fill=(255, 255, 255, 255))
+    d.ellipse((238, 296, 250, 312), fill=(40, 30, 30, 255))
+    d.ellipse((274, 296, 286, 312), fill=(40, 30, 30, 255))
+    d.arc((240, 320, 280, 350), 200, 340, fill=(40, 30, 30, 255), width=3)
+    d.polygon([(228, 320), (244, 312), (240, 326)], fill=(255, 255, 240, 255))
+    d.polygon([(284, 320), (268, 312), (272, 326)], fill=(255, 255, 240, 255))
+    bomb_cx, bomb_cy, bomb_r = 380, 280, 56
+    d.ellipse((bomb_cx - bomb_r, bomb_cy - bomb_r, bomb_cx + bomb_r, bomb_cy + bomb_r), fill=(20, 20, 24, 255), outline=(60, 60, 70, 255), width=4)
+    d.ellipse((bomb_cx - 30, bomb_cy - 30, bomb_cx - 10, bomb_cy - 10), fill=(120, 120, 140, 255))
+    d.line((bomb_cx, bomb_cy - bomb_r, bomb_cx + 22, bomb_cy - bomb_r - 36), fill=(80, 60, 30, 255), width=5)
+    d.ellipse((bomb_cx + 14, bomb_cy - bomb_r - 50, bomb_cx + 36, bomb_cy - bomb_r - 26), fill=(255, 200, 60, 255))
+    d.ellipse((bomb_cx + 20, bomb_cy - bomb_r - 56, bomb_cx + 32, bomb_cy - bomb_r - 40), fill=(255, 240, 130, 255))
+
+
+def draw_doge_mage(img):
+    d = ImageDraw.Draw(img)
+    draw_glow(img, W / 2, 360, 200, (180, 130, 255))
+    body = (180, 380, 332, 520)
+    rounded_rect(d, body, 36, fill=(220, 175, 120, 255), outline=(120, 90, 60, 255), width=4)
+    head = (200, 250, 312, 380)
+    rounded_rect(d, head, 32, fill=(230, 185, 130, 255), outline=(120, 90, 60, 255), width=4)
+    d.polygon([(210, 270), (200, 220), (240, 260)], fill=(230, 185, 130, 255), outline=(120, 90, 60, 255))
+    d.polygon([(302, 270), (312, 220), (272, 260)], fill=(230, 185, 130, 255), outline=(120, 90, 60, 255))
+    d.ellipse((222, 290, 244, 318), fill=(255, 255, 255, 255))
+    d.ellipse((268, 290, 290, 318), fill=(255, 255, 255, 255))
+    d.ellipse((228, 296, 240, 310), fill=(40, 30, 30, 255))
+    d.ellipse((274, 296, 286, 310), fill=(40, 30, 30, 255))
+    d.polygon([(244, 332), (268, 332), (256, 348)], fill=(40, 30, 30, 255))
+    d.arc((232, 340, 280, 372), 210, 330, fill=(40, 30, 30, 255), width=4)
+    hat_pts = [(180, 240), (332, 240), (256, 90)]
+    d.polygon(hat_pts, fill=(80, 50, 140, 255), outline=(40, 25, 80, 255))
+    for star_x, star_y, sr in [(225, 180, 9), (290, 200, 7), (256, 130, 8)]:
+        pts = []
+        for i in range(10):
+            ang = math.pi / 2 + i * math.pi / 5
+            r = sr if i % 2 == 0 else sr * 0.45
+            pts.append((star_x + math.cos(ang) * r, star_y - math.sin(ang) * r))
+        d.polygon(pts, fill=(255, 220, 80, 255))
+    rounded_rect(d, (172, 232, 340, 250), 8, fill=(255, 220, 80, 255), outline=(140, 110, 30, 255), width=3)
+    staff = [(330, 280), (440, 200), (430, 380), (330, 460)]
+    d.line(staff[:2], fill=(120, 80, 40, 255), width=8)
+    d.line(staff[1:3], fill=(120, 80, 40, 255), width=8)
+    orb_cx, orb_cy = 440, 200
+    for r, alpha in [(40, 60), (28, 110), (18, 200)]:
+        layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        ld.ellipse((orb_cx - r, orb_cy - r, orb_cx + r, orb_cy + r), fill=(180, 130, 255, alpha))
+        layer = layer.filter(ImageFilter.GaussianBlur(6))
+        img.alpha_composite(layer)
+    d.ellipse((orb_cx - 12, orb_cy - 12, orb_cx + 12, orb_cy + 12), fill=(255, 255, 255, 255))
+
+
+DRAWERS = {
+    "cannon": draw_cannon,
+    "tesla": draw_tesla,
+    "totem": draw_totem,
+    "bomber": draw_bomber,
+    "doge_mage": draw_doge_mage,
+}
+
+
+def make_card(card):
+    img = draw_frame(card)
+    draw_fn = DRAWERS.get(card["id"])
+    if draw_fn:
+        draw_fn(img)
+    return img
 
 
 def main():
-    with open(CARDS_JSON, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    for card in data["cards"]:
-        cid = card["id"]
-        print(f"Generating card art for {cid} ({card['displayName']})...")
-        img = draw_card(card)
-        out_path = OUT / f"{cid}.png"
-        img.save(out_path, "PNG")
-        print(f"  -> {out_path}")
-    print("Done.")
+    data = json.load(open(CARDS_JSON, encoding="utf-8"))
+    by_id = {c["id"]: c for c in data["cards"]}
+    targets = ["cannon", "tesla", "totem", "bomber", "doge_mage"]
+    for cid in targets:
+        if cid not in by_id:
+            print("missing card metadata for", cid)
+            continue
+        img = make_card(by_id[cid])
+        out = os.path.join(OUT_DIR, cid + ".png")
+        img.save(out)
+        print("wrote", out)
 
 
 if __name__ == "__main__":
-    sys.exit(main() or 0)
+    main()
