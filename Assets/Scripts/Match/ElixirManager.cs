@@ -35,5 +35,12 @@ namespace TrashRoyale.Match
             }
             return false;
         }
+
+        // Authoritative network sync — guest overrides its locally
+        // simulated elixir value with the host's truth.
+        public void OverrideFromSnapshot(float value)
+        {
+            Current = Mathf.Clamp(value, 0f, Max);
+        }
     }
 }

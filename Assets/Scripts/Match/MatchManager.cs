@@ -121,6 +121,57 @@ namespace TrashRoyale.Match
             return true;
         }
 
+        // Guest path: apply host's authoritative snapshot. The list
+        // of HPs is fixed-size:
+        //   [0..1] = PlayerSideTowers, [2..3] = EnemySideTowers,
+        //   [4]    = PlayerKing,       [5]    = EnemyKing.
+        // Mirror across teams because host and guest see swapped sides.
+        public void ApplyAuthoritativeSnapshot(float[] towerHps, float playerElixir, float enemyElixir,
+            int playerCrowns, int enemyCrowns, float timeRemaining)
+        {
+            if (Phase == MatchPhase.Ended) return;
+            // Mirror: host's "player" half is the guest's "enemy" half.
+            ApplyTowerHp(EnemySideTowers, 0, towerHps, 0);
+            ApplyTowerHp(EnemySideTowers, 1, towerHps, 1);
+            ApplyTowerHp(PlayerSideTowers, 0, towerHps, 2);
+            ApplyTowerHp(PlayerSideTowers, 1, towerHps, 3);
+            ApplyTowerHp(EnemyKing, towerHps, 4);
+            ApplyTowerHp(PlayerKing, towerHps, 5);
+            PlayerElixir?.OverrideFromSnapshot(enemyElixir);
+            EnemyElixir?.OverrideFromSnapshot(playerElixir);
+            PlayerCrowns = enemyCrowns;
+            EnemyCrowns = playerCrowns;
+            // Clamp local clock toward host so the countdown matches.
+            if (timeRemaining > 0f) TimeRemaining = timeRemaining;
+        }
+
+        static void ApplyTowerHp(List<Tower> list, int idx, float[] hps, int hpIdx)
+        {
+            if (list == null || idx >= list.Count) return;
+            ApplyTowerHp(list[idx], hps, hpIdx);
+        }
+
+        static void ApplyTowerHp(Tower t, float[] hps, int hpIdx)
+        {
+            if (t == null || t.isDead) return;
+            if (hpIdx < 0 || hpIdx >= hps.Length) return;
+            float v = hps[hpIdx];
+            if (v <= 0f)
+            {
+                // Force destroy via the existing damage path so all
+                // event handlers (king activation, crowns) still fire.
+                t.TakeDamage(t.hp + 1f, null);
+            }
+            else if (v < t.hp)
+            {
+                // Snap the visible HP down — apply the missing damage
+                // through TakeDamage so HpBar / FX update correctly.
+                t.TakeDamage(t.hp - v, null);
+            }
+            // We never heal towers from a snapshot — local sim having
+            // less HP than host just means host is slightly behind.
+        }
+
         public void OnTowerDestroyed(Tower t)
         {
             OnTowerDown?.Invoke(t);
