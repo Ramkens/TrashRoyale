@@ -278,8 +278,13 @@ namespace TrashRoyale.UI
         void WaitForFriend()
         {
             if (string.IsNullOrEmpty(_roomCode)) return;
-            if (_statusText != null) _statusText.text = "Запускаю комнату " + _roomCode + "...";
-            StartBattle(_roomCode, true);
+            // Open the dedicated waiting-room popup so the host stays in
+            // the lobby until the guest connects. Both clients then hit
+            // a synchronised countdown and load Battle together — fixes
+            // the bug where the host loaded the arena alone and the
+            // guest joined mid-match.
+            WaitingRoomPopup.Open(transform.parent, _roomCode, isHost: true);
+            Destroy(gameObject);
         }
 
         void CopyLink()
@@ -298,8 +303,11 @@ namespace TrashRoyale.UI
                 if (_statusText != null) _statusText.text = "Слишком короткий код";
                 return;
             }
-            if (_statusText != null) _statusText.text = "Подключаюсь к комнате " + code + "...";
-            StartBattle(code, false);
+            // Use the waiting-room popup so the guest's bootstrap also
+            // waits for the relay's "peer ready" signal before loading
+            // Battle. Keeps both clients in lockstep.
+            WaitingRoomPopup.Open(transform.parent, code, isHost: false);
+            Destroy(gameObject);
         }
 
         void JoinRandom()
@@ -321,8 +329,10 @@ namespace TrashRoyale.UI
                         : ("Жду в очереди... код " + result.roomCode);
                 }
                 // Server tells us our role: if we created the room we're host,
-                // otherwise we slot in as guest.
-                StartBattle(result.roomCode, result.role == "host");
+                // otherwise we slot in as guest. Hand off to the waiting
+                // room so both peers sync before entering Battle.
+                WaitingRoomPopup.Open(transform.parent, result.roomCode, result.role == "host");
+                Destroy(gameObject);
             }));
         }
 
