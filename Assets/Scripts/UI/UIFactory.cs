@@ -13,8 +13,18 @@ namespace TrashRoyale.UI
             get
             {
                 if (_font != null) return _font;
-                _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                if (_font == null) _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                // Unity 2022.3+ replaced "Arial.ttf" with "LegacyRuntime.ttf"
+                // and the old name now THROWS instead of returning null,
+                // which previously aborted any popup that called MakeText
+                // (Road of Glory was the visible victim — empty panel).
+                // Try LegacyRuntime first, fall back to Arial for older Unity,
+                // then to OS Arial as last resort.
+                try { _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
+                if (_font == null)
+                {
+                    try { _font = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { }
+                }
+                if (_font == null) _font = Font.CreateDynamicFontFromOSFont("Arial", 16);
                 return _font;
             }
         }

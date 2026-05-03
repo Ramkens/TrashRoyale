@@ -119,7 +119,15 @@ namespace TrashRoyale.Net
         public void SendCardPlay(int handSlot, string cardId, Vector3 pos)
         {
             if (_ws == null || !_ready) return;
-            var msg = $"{{\"type\":\"play\",\"slot\":{handSlot},\"card\":\"{cardId}\",\"x\":{pos.x:F2},\"z\":{pos.z:F2}}}";
+            // "from" tags the sender role so receivers can drop their
+            // own echoes (the relay broadcasts to the whole room, sender
+            // included) without losing legitimate plays from the other
+            // side. Without this, the guest used to drop ALL play
+            // messages with `if (!IsHost) return` — that nuked echoes
+            // AND the host's plays, so the guest could not see any
+            // enemy units (only tower HP via snapshots).
+            string fromRole = IsHost ? "host" : "guest";
+            var msg = $"{{\"type\":\"play\",\"from\":\"{fromRole}\",\"slot\":{handSlot},\"card\":\"{cardId}\",\"x\":{pos.x:F2},\"z\":{pos.z:F2}}}";
             _ws.Send(msg);
         }
 
@@ -127,35 +135,47 @@ namespace TrashRoyale.Net
         {
             if (json.IndexOf("\"type\":\"play\"", StringComparison.Ordinal) >= 0)
             {
+                string from = ExtractStr(json, "from");
+                string ownRole = IsHost ? "host" : "guest";
+                // Drop our own echo. Older builds without "from" come
+                // back as null — fall back to the previous behaviour
+                // (host runs full path, guest ignores).
+                if (from != null && from == ownRole) return;
+                if (from == null && !IsHost) return;
+
                 string card = ExtractStr(json, "card");
                 float x = ExtractFloat(json, "x");
                 float z = ExtractFloat(json, "z");
                 var data = CardDatabase.Get(card);
                 if (data == null) return;
-                // remote player is on the opposite side, mirror Z
+                // remote player is on the opposite side, mirror X/Z.
                 Vector3 worldPos = new Vector3(-x, 0, -z);
-                // Host-authoritative validation. Without this the guest
-                // can spam the same play in the 0.25s gap between
-                // snapshots: the host wouldn't deduct enemy elixir, the
-                // next snapshot would push the *un-deducted* elixir back
-                // to the guest, and the guest could keep spending the
-                // same pool over and over -> infinite-elixir exploit.
-                // Only the host runs this branch (guest also receives
-                // play echoes for its own plays — those are harmless and
-                // skipped because the host is the only authority).
-                if (!IsHost) return;
-                if (ArenaController.I != null &&
-                    !ArenaController.I.IsValidPlacement(Team.Enemy, worldPos, data))
+
+                if (IsHost)
                 {
-                    return;
+                    // Host-authoritative validation. Without this the
+                    // guest could spam the same play in the 0.25s gap
+                    // between snapshots: the host wouldn't deduct
+                    // enemy elixir, the next snapshot would push the
+                    // un-deducted elixir back to the guest, and the
+                    // guest could keep spending the same pool over and
+                    // over -> infinite-elixir exploit.
+                    if (ArenaController.I != null &&
+                        !ArenaController.I.IsValidPlacement(Team.Enemy, worldPos, data))
+                    {
+                        return;
+                    }
+                    if (!_match.EnemyElixir.TrySpend(data.elixirCost))
+                    {
+                        // Guest tried to spend more elixir than the host
+                        // thinks they have. Drop the play silently — the
+                        // next snapshot will correct the guest's UI.
+                        return;
+                    }
                 }
-                if (!_match.EnemyElixir.TrySpend(data.elixirCost))
-                {
-                    // Guest tried to spend more elixir than the host
-                    // thinks they have. Drop the play silently — the
-                    // next snapshot will correct the guest's UI.
-                    return;
-                }
+                // Both host and guest spawn the enemy unit locally so
+                // each player can see the other side's deployments.
+                // Host's elixir/HP snapshots reconcile any drift later.
                 UnitFactory.SpawnCard(data, Team.Enemy, worldPos);
                 return;
             }
