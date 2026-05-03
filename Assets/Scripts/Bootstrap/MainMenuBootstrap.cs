@@ -158,6 +158,22 @@ namespace TrashRoyale.Bootstrap
             trLR.anchorMax = new Vector2(0.97f, 0.18f);
             trLR.offsetMin = trLR.offsetMax = Vector2.zero;
             trLabel.color = new Color(1f, 1f, 1f, 0.7f);
+
+            // Tap trophies area → "Дорога Славы" popup with all arenas.
+            // The trophies count + tier name + label all open the same screen.
+            var trophyHit = UIFactory.MakePanel(banner.transform, "TrophiesHit", new Color(0, 0, 0, 0.0001f));
+            var thr = trophyHit.GetComponent<RectTransform>();
+            thr.anchorMin = new Vector2(0.62f, 0f);
+            thr.anchorMax = new Vector2(1f, 1f);
+            thr.offsetMin = thr.offsetMax = Vector2.zero;
+            trophyHit.raycastTarget = true;
+            var thb = trophyHit.gameObject.AddComponent<Button>();
+            thb.targetGraphic = trophyHit;
+            thb.onClick.AddListener(() =>
+            {
+                AudioManager.PlaySfx("click");
+                RoadToGloryPopup.Open(_canvas.transform, _profile);
+            });
         }
 
         void RefreshBanner()

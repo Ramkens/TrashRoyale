@@ -7,8 +7,19 @@ namespace TrashRoyale.Match
 {
     public static class ArenaBuilder
     {
+        // Cached so MakeTower (and the camera/fog setup) can read the
+        // current theme without threading it through every method.
+        static ArenaTheme _theme;
+
         public static void Build(MatchManager match, ArenaController arena)
         {
+            // Pick the visual theme based on the player's current
+            // trophy count — this is how the "Дорога Славы" reskin
+            // works in CR: every ~250 cups the floor / sky / fog
+            // colours change, but layout stays the same.
+            int trophies = TrashRoyale.Persistence.PlayerProfile.Load().trophies;
+            _theme = ArenaTheme.Current(trophies);
+
             BuildBackdrop();
             BuildGround();
             BuildRiver();
@@ -16,6 +27,7 @@ namespace TrashRoyale.Match
             BuildTowers(match);
             ConfigureCamera();
             ConfigureLight();
+            ConfigureFog();
         }
 
         static Material LitMat(Color c, Texture2D tex = null, Vector2? tile = null)
@@ -64,7 +76,7 @@ namespace TrashRoyale.Match
                 quad.name = side == 0 ? "PlayerSide" : "EnemySide";
                 quad.transform.localScale = new Vector3(ArenaController.HalfWidth * 2f, 0.2f, ArenaController.HalfLength);
                 quad.transform.position = new Vector3(0, -0.1f, side == 0 ? -ArenaController.HalfLength * 0.5f : ArenaController.HalfLength * 0.5f);
-                Color tint = side == 0 ? new Color(0.85f, 1.0f, 0.85f) : new Color(0.95f, 0.85f, 1.0f);
+                Color tint = side == 0 ? _theme.PlayerSideTint : _theme.EnemySideTint;
                 quad.GetComponent<MeshRenderer>().sharedMaterial = LitMat(tint, grass, new Vector2(4, 4));
             }
         }
@@ -76,7 +88,7 @@ namespace TrashRoyale.Match
             river.name = "River";
             river.transform.localScale = new Vector3(ArenaController.HalfWidth * 2f, 0.05f, ArenaController.RiverHalfThickness * 2f);
             river.transform.position = new Vector3(0, -0.05f, 0);
-            river.GetComponent<MeshRenderer>().sharedMaterial = LitMat(Color.white, riverTex, new Vector2(2, 1));
+            river.GetComponent<MeshRenderer>().sharedMaterial = LitMat(_theme.RiverTint, riverTex, new Vector2(2, 1));
         }
 
         static void BuildBridges()
@@ -88,7 +100,7 @@ namespace TrashRoyale.Match
                 bridge.name = "Bridge";
                 bridge.transform.localScale = new Vector3(1.6f, 0.08f, 1.4f);
                 bridge.transform.position = new Vector3(side * 2.8f, 0.0f, 0f);
-                bridge.GetComponent<MeshRenderer>().sharedMaterial = LitMat(Color.white, bridgeTex, new Vector2(1, 1));
+                bridge.GetComponent<MeshRenderer>().sharedMaterial = LitMat(_theme.BridgeTint, bridgeTex, new Vector2(1, 1));
             }
         }
 
@@ -115,25 +127,32 @@ namespace TrashRoyale.Match
             var crown = Tex("UI/tower_king");
 
             // Tower base
+            // Theme tints — towers use lighter "tower" tint and the
+            // king tower uses a stronger "king" tint so the dome
+            // visually pops out per arena.
+            Color towerTint = team == Team.Player ? _theme.PlayerTowerTint : _theme.EnemyTowerTint;
+            Color kingTint = team == Team.Player ? _theme.PlayerKingTint : _theme.EnemyKingTint;
+            Color baseTint = Color.Lerp(towerTint, Color.white, 0.55f);
+
             var baseB = GameObject.CreatePrimitive(PrimitiveType.Cube);
             baseB.transform.SetParent(go.transform, false);
             baseB.transform.localPosition = new Vector3(0, king ? 0.5f : 0.4f, 0);
             baseB.transform.localScale = new Vector3(king ? 1.8f : 1.25f, king ? 1.0f : 0.8f, king ? 1.8f : 1.25f);
-            baseB.GetComponent<MeshRenderer>().sharedMaterial = LitMat(team == Team.Player ? new Color(0.85f, 0.95f, 1f) : new Color(1f, 0.9f, 0.9f), brick, new Vector2(2, 1));
+            baseB.GetComponent<MeshRenderer>().sharedMaterial = LitMat(baseTint, brick, new Vector2(2, 1));
 
             // Tower body
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.transform.SetParent(go.transform, false);
             visual.transform.localPosition = new Vector3(0, king ? 1.6f : 1.2f, 0);
             visual.transform.localScale = new Vector3(king ? 1.4f : 0.95f, king ? 1.6f : 1.2f, king ? 1.4f : 0.95f);
-            visual.GetComponent<MeshRenderer>().sharedMaterial = LitMat(team == Team.Player ? new Color(0.55f, 0.75f, 1f) : new Color(1f, 0.55f, 0.55f), brick, new Vector2(2, 2));
+            visual.GetComponent<MeshRenderer>().sharedMaterial = LitMat(towerTint, brick, new Vector2(2, 2));
 
             // Roof
             var roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
             roof.transform.SetParent(go.transform, false);
             roof.transform.localPosition = new Vector3(0, king ? 2.6f : 1.95f, 0);
             roof.transform.localScale = new Vector3(king ? 1.6f : 1.1f, 0.25f, king ? 1.6f : 1.1f);
-            var roofMat = LitMat(team == Team.Player ? new Color(0.4f, 0.55f, 1f) : new Color(0.95f, 0.45f, 0.45f), king ? crown : null, new Vector2(1, 1));
+            var roofMat = LitMat(kingTint, king ? crown : null, new Vector2(1, 1));
             roof.GetComponent<MeshRenderer>().sharedMaterial = roofMat;
 
             // King flag pole
@@ -175,7 +194,7 @@ namespace TrashRoyale.Match
             cam.fieldOfView = 52f;
             cam.nearClipPlane = 0.3f;
             cam.farClipPlane = 60f;
-            cam.backgroundColor = new Color(0.18f, 0.22f, 0.45f);
+            cam.backgroundColor = _theme.SkyTop;
             cam.clearFlags = CameraClearFlags.SolidColor;
             if (camGo.GetComponent<AudioListener>() == null) camGo.AddComponent<AudioListener>();
         }
@@ -186,9 +205,28 @@ namespace TrashRoyale.Match
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
             light.intensity = 1.4f;
-            light.color = new Color(1f, 0.96f, 0.85f);
+            // Tint the sun very slightly toward the sky colour so the
+            // arena reads as the same scene; keep mostly warm for legibility.
+            light.color = Color.Lerp(new Color(1f, 0.96f, 0.85f), _theme.SkyTop, 0.18f);
             lightGo.transform.rotation = Quaternion.Euler(50f, 30f, 0f);
-            RenderSettings.ambientLight = new Color(0.55f, 0.55f, 0.6f);
+            RenderSettings.ambientLight = Color.Lerp(new Color(0.55f, 0.55f, 0.6f), _theme.SkyTop, 0.35f);
+        }
+
+        static void ConfigureFog()
+        {
+            // Built-in fog gives the higher arenas (lava, neon, space)
+            // a richer atmosphere without needing extra shaders.
+            if (_theme.FogDensity > 0f)
+            {
+                RenderSettings.fog = true;
+                RenderSettings.fogMode = FogMode.ExponentialSquared;
+                RenderSettings.fogDensity = _theme.FogDensity;
+                RenderSettings.fogColor = _theme.FogColor;
+            }
+            else
+            {
+                RenderSettings.fog = false;
+            }
         }
     }
 }
