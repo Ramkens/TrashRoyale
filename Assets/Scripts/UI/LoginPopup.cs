@@ -70,11 +70,15 @@ namespace TrashRoyale.UI
             elrt.offsetMin = elrt.offsetMax = Vector2.zero;
             emailLabel.color = Color.white;
 
-            _emailInput = UIFactory.MakeInputField(panel.transform, "Email", AuthClient.Email, 40);
+            // Smaller font size — at 40 the field could only fit ~15 characters
+            // before the text shifted, so a typical email like
+            // "predatel586@gmail.com" wouldn't fit. 28 leaves room for ~25.
+            _emailInput = UIFactory.MakeInputField(panel.transform, "Email", AuthClient.Email, 28);
             _emailInput.contentType = InputField.ContentType.EmailAddress;
+            _emailInput.characterLimit = 64;
             var erit = _emailInput.GetComponent<RectTransform>();
-            erit.anchorMin = new Vector2(0.08f, 0.62f);
-            erit.anchorMax = new Vector2(0.92f, 0.74f);
+            erit.anchorMin = new Vector2(0.04f, 0.62f);
+            erit.anchorMax = new Vector2(0.96f, 0.74f);
             erit.offsetMin = erit.offsetMax = Vector2.zero;
 
             var pwLabel = UIFactory.MakeText(panel.transform, "PwLabel", "Пароль (≥6 символов)", 32, TextAnchor.MiddleLeft);
@@ -84,11 +88,12 @@ namespace TrashRoyale.UI
             plrt.offsetMin = plrt.offsetMax = Vector2.zero;
             pwLabel.color = Color.white;
 
-            _passwordInput = UIFactory.MakeInputField(panel.transform, "Pw", "", 40);
+            _passwordInput = UIFactory.MakeInputField(panel.transform, "Pw", "", 28);
             _passwordInput.contentType = InputField.ContentType.Password;
+            _passwordInput.characterLimit = 64;
             var prrt = _passwordInput.GetComponent<RectTransform>();
-            prrt.anchorMin = new Vector2(0.08f, 0.42f);
-            prrt.anchorMax = new Vector2(0.92f, 0.54f);
+            prrt.anchorMin = new Vector2(0.04f, 0.42f);
+            prrt.anchorMax = new Vector2(0.96f, 0.54f);
             prrt.offsetMin = prrt.offsetMax = Vector2.zero;
 
             _statusText = UIFactory.MakeText(panel.transform, "Status", "", 28, TextAnchor.MiddleCenter);

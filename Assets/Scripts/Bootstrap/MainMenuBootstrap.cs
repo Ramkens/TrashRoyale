@@ -43,14 +43,10 @@ namespace TrashRoyale.Bootstrap
             {
                 FriendlyBattlePopup.Open(_canvas.transform, pendingCode);
             }
-            // PR5: prompt for login on first run if the user has never
-            // logged in OR explicitly chosen offline mode. Skipping is
-            // always allowed; this is just a one-time CTA so the user
-            // knows cloud-saved profiles exist.
-            else if (!AuthClient.IsLoggedIn && !AuthClient.OfflineMode)
-            {
-                LoginPopup.Open(_canvas.transform, RefreshBanner);
-            }
+            // Login is no longer surfaced at startup — players should be
+            // able to play immediately. Account-linking (so progress can
+            // sync across devices) lives in Settings → "Привязать
+            // аккаунт", reached from the gear icon in the main menu.
         }
 
         void EnsureEventSystem()
@@ -306,27 +302,67 @@ namespace TrashRoyale.Bootstrap
             nrt.anchorMax = new Vector2(1, 0.13f);
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
 
-            // Left tab: КОЛОДА
+            // Three-tab layout: КОЛОДА | ТРЕНИРОВКА | ДРУЗЬЯ
             var deckBtn = UIFactory.MakeButton(nav.transform, "DeckTab", "КОЛОДА", () =>
             {
                 AudioManager.PlaySfx("click");
                 DeckEditor.Open(_canvas.transform, _profile, RebuildDeckPreview);
             });
             var drt = deckBtn.GetComponent<RectTransform>();
-            drt.anchorMin = new Vector2(0.03f, 0.15f);
-            drt.anchorMax = new Vector2(0.49f, 0.85f);
+            drt.anchorMin = new Vector2(0.02f, 0.15f);
+            drt.anchorMax = new Vector2(0.33f, 0.85f);
             drt.offsetMin = drt.offsetMax = Vector2.zero;
+            var deckLabel = deckBtn.GetComponentInChildren<Text>();
+            if (deckLabel != null) deckLabel.fontSize = 36;
 
-            // Right tab: ДРУЗЬЯ
+            var trainBtn = UIFactory.MakeButton(nav.transform, "TrainingTab", "ТРЕНИРОВКА", () =>
+            {
+                AudioManager.PlaySfx("click");
+                TrainingPopup.Open(_canvas.transform);
+            });
+            var trrt = trainBtn.GetComponent<RectTransform>();
+            trrt.anchorMin = new Vector2(0.34f, 0.15f);
+            trrt.anchorMax = new Vector2(0.66f, 0.85f);
+            trrt.offsetMin = trrt.offsetMax = Vector2.zero;
+            var trainLabel = trainBtn.GetComponentInChildren<Text>();
+            if (trainLabel != null) trainLabel.fontSize = 32;
+
             var friendsBtn = UIFactory.MakeButton(nav.transform, "FriendsTab", "ДРУЗЬЯ", () =>
             {
                 AudioManager.PlaySfx("click");
                 FriendlyBattlePopup.Open(_canvas.transform);
             });
             var frt2 = friendsBtn.GetComponent<RectTransform>();
-            frt2.anchorMin = new Vector2(0.51f, 0.15f);
-            frt2.anchorMax = new Vector2(0.97f, 0.85f);
+            frt2.anchorMin = new Vector2(0.67f, 0.15f);
+            frt2.anchorMax = new Vector2(0.98f, 0.85f);
             frt2.offsetMin = frt2.offsetMax = Vector2.zero;
+            var friendsLabel = friendsBtn.GetComponentInChildren<Text>();
+            if (friendsLabel != null) friendsLabel.fontSize = 36;
+
+            BuildSettingsButton();
+        }
+
+        void BuildSettingsButton()
+        {
+            var btn = UIFactory.MakeButton(_canvas.transform, "GearBtn", "", () =>
+            {
+                AudioManager.PlaySfx("click");
+                SettingsPopup.Open(_canvas.transform, RefreshBanner);
+            });
+            var rt = btn.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.88f, 0.91f);
+            rt.anchorMax = new Vector2(0.985f, 0.985f);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            // Replace the empty button label with a gear icon — Unity's
+            // built-in Arial doesn't include the ⚙ glyph.
+            var icon = UIFactory.MakeIcon(btn.transform, "Icons/gear", new Vector2(64, 64));
+            if (icon != null)
+            {
+                var irt = icon.GetComponent<RectTransform>();
+                irt.anchorMin = new Vector2(0.15f, 0.15f);
+                irt.anchorMax = new Vector2(0.85f, 0.85f);
+                irt.offsetMin = irt.offsetMax = Vector2.zero;
+            }
         }
 
         void StartPvE()

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TrashRoyale.Core;
 
 namespace TrashRoyale.Persistence
 {
@@ -93,7 +94,26 @@ namespace TrashRoyale.Persistence
             baseBot.name = MemeNames[Random.Range(0, MemeNames.Length)];
             baseBot.bannerColor = BannerColors[Random.Range(0, BannerColors.Length)];
             baseBot.iconKey = IconKeys[Random.Range(0, IconKeys.Length)];
+            // Each match the bot uses a fresh random 8-card deck pulled
+            // from the live card database, instead of always cycling the
+            // same archetype kit (which made every PvE match feel like
+            // the same cards in the same order).
+            baseBot.deck = RandomDeck(8);
             return baseBot;
+        }
+
+        public static List<string> RandomDeck(int size)
+        {
+            CardDatabase.EnsureLoaded();
+            var pool = new List<string>();
+            foreach (var c in CardDatabase.All) pool.Add(c.id);
+            for (int i = pool.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (pool[i], pool[j]) = (pool[j], pool[i]);
+            }
+            if (pool.Count > size) pool.RemoveRange(size, pool.Count - size);
+            return pool;
         }
 
         public static string TierName(int trophies)
