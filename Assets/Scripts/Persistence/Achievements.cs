@@ -161,6 +161,18 @@ namespace TrashRoyale.Persistence
             return null;
         }
 
+        // String overload — handy for the equippedBadges list which
+        // stores medal kinds as strings (since profiles persist via
+        // JsonUtility and AchievementKind enum values can be renumbered
+        // between releases).
+        public static AchievementDef Find(string kindString)
+        {
+            if (string.IsNullOrEmpty(kindString)) return null;
+            foreach (var a in All)
+                if (a.kind.ToString() == kindString) return a;
+            return null;
+        }
+
         /// <summary>
         /// Evaluate post-match stats and unlock any newly-earned medals.
         /// Returns the list of NEWLY unlocked achievements (so the

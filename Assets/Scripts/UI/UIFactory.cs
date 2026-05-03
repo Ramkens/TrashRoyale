@@ -138,7 +138,15 @@ namespace TrashRoyale.UI
 
         public static Image MakeIcon(Transform parent, string resourcePath, Vector2 size)
         {
-            var go = new GameObject("Icon_" + resourcePath);
+            return MakeIcon(parent, "Icon_" + resourcePath, resourcePath, size);
+        }
+
+        // Named overload — keeps debugging easier when the same parent
+        // hosts several icons. Used by the medal strip / achievements
+        // grid where every slot needs a unique name.
+        public static Image MakeIcon(Transform parent, string name, string resourcePath, Vector2 size)
+        {
+            var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             var rt = go.AddComponent<RectTransform>();
             rt.sizeDelta = size;

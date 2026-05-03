@@ -79,12 +79,22 @@ namespace TrashRoyale.UI
             string oppName = req != null ? req.botName : "Соперник";
             Color oppColor = req != null ? req.botBannerColor : new Color(0.6f, 0.35f, 0.85f);
             string oppIcon = req != null ? req.botIconKey : "fist";
-            _opponentBanner = BuildBanner("OpponentBanner", oppName, oppColor, oppIcon, top: true);
+            string[] oppBadges = req != null && req.botBadgeKeys != null ? req.botBadgeKeys : new string[0];
+            _opponentBanner = BuildBanner("OpponentBanner", oppName, oppColor, oppIcon, oppBadges, top: true);
 
-            // Player banner (bottom — slides up).
+            // Player banner (bottom — slides up). Use the player's
+            // unlocked banner-color reward (default sky-blue) and the
+            // medals they've equipped on their profile, falling back to
+            // the highest-tier unlocked when nothing is pinned.
             Color plColor = new Color(0.25f, 0.55f, 0.95f);
+            if (!string.IsNullOrEmpty(profile.bannerColorHex) &&
+                ColorUtility.TryParseHtmlString(profile.bannerColorHex, out var parsedColor))
+            {
+                plColor = parsedColor;
+            }
             string plIcon = "crown";
-            _playerBanner = BuildBanner("PlayerBanner", profile.playerName, plColor, plIcon, top: false);
+            string[] plBadges = ResolvePlayerBadges(profile);
+            _playerBanner = BuildBanner("PlayerBanner", profile.playerName, plColor, plIcon, plBadges, top: false);
 
             // Big countdown digits in center (after banners exit).
             _countdownText = UIFactory.MakeText(transform, "Countdown", "", 380, TextAnchor.MiddleCenter);
@@ -99,7 +109,7 @@ namespace TrashRoyale.UI
             cOutline.effectDistance = new Vector2(10, -10);
         }
 
-        RectTransform BuildBanner(string name, string nick, Color color, string iconKey, bool top)
+        RectTransform BuildBanner(string name, string nick, Color color, string iconKey, string[] badgeKeys, bool top)
         {
             var panel = UIFactory.MakePanel(transform, name, new Color(0.05f, 0.07f, 0.18f, 0.95f));
             var btnSp = UIFactory.LoadSprite("UI/btn_gold");
@@ -113,31 +123,91 @@ namespace TrashRoyale.UI
             rt.anchorMin = new Vector2(0f, top ? 1f : 0f);
             rt.anchorMax = new Vector2(1f, top ? 1f : 0f);
             rt.pivot = new Vector2(0.5f, top ? 0f : 1f);
-            rt.sizeDelta = new Vector2(-80, 200);
-            // Start off-screen — slide in via Update().
-            float offY = top ? 260f : -260f;
+            rt.sizeDelta = new Vector2(-80, 240);
+            float offY = top ? 280f : -280f;
             rt.anchoredPosition = new Vector2(0, offY);
 
-            // Icon on left.
+            // Primary identity icon on the left.
             var iconImg = UIFactory.MakeIcon(panel.transform, "Icon", "Icons/" + iconKey, new Vector2(140, 140));
             var irt = iconImg.GetComponent<RectTransform>();
             irt.anchorMin = new Vector2(0f, 0.5f);
             irt.anchorMax = new Vector2(0f, 0.5f);
             irt.pivot = new Vector2(0f, 0.5f);
-            irt.anchoredPosition = new Vector2(20, 0);
+            irt.anchoredPosition = new Vector2(20, 20);
 
-            // Name center-left.
-            var nameTxt = UIFactory.MakeText(panel.transform, "Name", nick, 64, TextAnchor.MiddleLeft);
+            // Player nick — anchored above the badge strip, not over it.
+            var nameTxt = UIFactory.MakeText(panel.transform, "Name", nick, 60, TextAnchor.MiddleLeft);
             nameTxt.color = Color.white;
             var nrt = nameTxt.GetComponent<RectTransform>();
-            nrt.anchorMin = new Vector2(0f, 0f);
+            nrt.anchorMin = new Vector2(0f, 0.45f);
             nrt.anchorMax = new Vector2(1f, 1f);
-            nrt.offsetMin = new Vector2(180, 10);
+            nrt.offsetMin = new Vector2(180, 0);
             nrt.offsetMax = new Vector2(-30, -10);
             var nameOutline = nameTxt.gameObject.AddComponent<Outline>();
             nameOutline.effectColor = Color.black;
             nameOutline.effectDistance = new Vector2(3, -3);
+
+            // Badge strip — up to 3 secondary medal/icon slots beneath
+            // the nick. Skips empty entries gracefully.
+            if (badgeKeys != null && badgeKeys.Length > 0)
+            {
+                var strip = UIFactory.MakePanel(panel.transform, "BadgeStrip", new Color(0, 0, 0, 0));
+                strip.raycastTarget = false;
+                var bsr = strip.GetComponent<RectTransform>();
+                bsr.anchorMin = new Vector2(0f, 0f);
+                bsr.anchorMax = new Vector2(1f, 0.45f);
+                bsr.offsetMin = new Vector2(180, 12);
+                bsr.offsetMax = new Vector2(-30, -8);
+                int slot = 0;
+                for (int i = 0; i < badgeKeys.Length && slot < 3; i++)
+                {
+                    var key = badgeKeys[i];
+                    if (string.IsNullOrEmpty(key)) continue;
+                    var badge = UIFactory.MakeIcon(strip.transform, "Badge_" + slot, "Icons/" + key, new Vector2(78, 78));
+                    var brt = badge.GetComponent<RectTransform>();
+                    brt.anchorMin = new Vector2(slot * 0.34f, 0f);
+                    brt.anchorMax = new Vector2(slot * 0.34f + 0.30f, 1f);
+                    brt.offsetMin = brt.offsetMax = Vector2.zero;
+                    slot++;
+                }
+            }
             return rt;
+        }
+
+        static string[] ResolvePlayerBadges(PlayerProfile profile)
+        {
+            // 1) Honor the player's explicit equipped list (max 3).
+            if (profile.equippedBadges != null && profile.equippedBadges.Count > 0)
+            {
+                var list = new System.Collections.Generic.List<string>();
+                foreach (var kindStr in profile.equippedBadges)
+                {
+                    if (string.IsNullOrEmpty(kindStr)) continue;
+                    var def = Achievements.Find(kindStr);
+                    if (def != null && profile.unlockedAchievements != null
+                        && profile.unlockedAchievements.Contains(def.kind.ToString()))
+                    {
+                        list.Add(def.medalIconKey);
+                        if (list.Count >= 3) break;
+                    }
+                }
+                if (list.Count > 0) return list.ToArray();
+            }
+
+            // 2) Fallback: take the top 3 highest-priority unlocked
+            // medals (catalog order).
+            if (profile.unlockedAchievements != null && profile.unlockedAchievements.Count > 0)
+            {
+                var list = new System.Collections.Generic.List<string>();
+                for (int i = Achievements.All.Length - 1; i >= 0 && list.Count < 3; i--)
+                {
+                    var def = Achievements.All[i];
+                    if (!profile.unlockedAchievements.Contains(def.kind.ToString())) continue;
+                    list.Add(def.medalIconKey);
+                }
+                return list.ToArray();
+            }
+            return new string[0];
         }
 
         public void StartIntro()

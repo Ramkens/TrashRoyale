@@ -147,6 +147,7 @@ namespace TrashRoyale.UI
                 botDifficulty = tier.difficulty,
                 botBannerColor = bot.bannerColor,
                 botIconKey = bot.iconKey,
+                botBadgeKeys = bot.badgeKeys,
                 trophyDelta = 0,
             };
             SceneManager.LoadScene("Battle");

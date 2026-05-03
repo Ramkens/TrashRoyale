@@ -24,6 +24,12 @@ namespace TrashRoyale.Persistence
         // unlocked medal — but the user can pin a specific one via the
         // achievements popup.
         public string pinnedMedalKind = "";
+        // Up to 3 medals equipped on the banner. Order = display order.
+        // Falls back to highest-tier unlocked when empty.
+        public List<string> equippedBadges = new List<string>();
+        // Persistent anonymous identifier so the cloud-sync layer can
+        // attribute progress before the player binds an email.
+        public string playerId = "";
         // Lifetime totals — useful for additional achievements down the
         // road (e.g. crowns scored across all matches).
         public int totalCrownsScored = 0;
@@ -43,7 +49,6 @@ namespace TrashRoyale.Persistence
             {
                 p.deck = new List<string> { "knight", "pig", "skibidi", "pocoyo", "amongus", "cheems", "nyancat", "fireball" };
             }
-            // sanitize
             for (int i = p.deck.Count - 1; i >= 0; i--)
             {
                 if (CardDatabase.Get(p.deck[i]) == null) p.deck.RemoveAt(i);
@@ -53,6 +58,12 @@ namespace TrashRoyale.Persistence
             {
                 var c = CardDatabase.All[idx++];
                 if (!p.deck.Contains(c.id)) p.deck.Add(c.id);
+            }
+            if (p.equippedBadges == null) p.equippedBadges = new List<string>();
+            if (p.unlockedAchievements == null) p.unlockedAchievements = new List<string>();
+            if (string.IsNullOrEmpty(p.playerId))
+            {
+                p.playerId = "guest_" + Guid.NewGuid().ToString("N").Substring(0, 12);
             }
             return p;
         }

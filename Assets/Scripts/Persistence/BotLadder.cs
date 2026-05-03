@@ -17,6 +17,9 @@ namespace TrashRoyale.Persistence
             // different — different banner color, different meme icon.
             public Color bannerColor;
             public string iconKey;
+            // Three secondary badge icons shown on the bot's intro
+            // banner (mirrors the player's equippedBadges list).
+            public string[] badgeKeys;
         }
 
         static readonly List<string> KitDefault = new List<string> { "knight", "pig", "skibidi", "pocoyo", "amongus", "cheems", "nyancat", "fireball" };
@@ -94,6 +97,17 @@ namespace TrashRoyale.Persistence
             baseBot.name = MemeNames[Random.Range(0, MemeNames.Length)];
             baseBot.bannerColor = BannerColors[Random.Range(0, BannerColors.Length)];
             baseBot.iconKey = IconKeys[Random.Range(0, IconKeys.Length)];
+            // Pick 3 distinct secondary badges so the bot's intro banner
+            // looks as decorated as the player's.
+            var pool = new List<string>(IconKeys);
+            for (int s = pool.Count - 1; s > 0; s--)
+            {
+                int j = Random.Range(0, s + 1);
+                (pool[s], pool[j]) = (pool[j], pool[s]);
+            }
+            int take = Mathf.Min(3, pool.Count);
+            baseBot.badgeKeys = new string[take];
+            for (int s = 0; s < take; s++) baseBot.badgeKeys[s] = pool[s];
             // Each match the bot uses a fresh random 8-card deck pulled
             // from the live card database, instead of always cycling the
             // same archetype kit (which made every PvE match feel like

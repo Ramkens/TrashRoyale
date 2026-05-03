@@ -87,8 +87,18 @@ namespace TrashRoyale.UI
             foreach (var def in Achievements.All)
             {
                 bool earned = unlocked.Contains(def.kind.ToString());
-                BuildTile(content.transform, def, earned);
+                BuildTile(content.transform, def, earned, profile);
             }
+
+            // Hint about equip flow.
+            var hint = UIFactory.MakeText(panel.transform, "EquipHint",
+                "Тапни на разблокированную медаль чтобы повесить её на баннер (макс. 3).",
+                22, TextAnchor.MiddleCenter);
+            var hrt = hint.GetComponent<RectTransform>();
+            hrt.anchorMin = new Vector2(0.04f, 0.005f);
+            hrt.anchorMax = new Vector2(0.96f, 0.045f);
+            hrt.offsetMin = hrt.offsetMax = Vector2.zero;
+            hint.color = new Color(0.85f, 0.85f, 1f, 0.9f);
 
             // Close button in corner.
             var close = UIFactory.MakeButton(panel.transform, "Close", "X", () =>
@@ -102,15 +112,25 @@ namespace TrashRoyale.UI
             crrt.offsetMin = crrt.offsetMax = Vector2.zero;
         }
 
-        static void BuildTile(Transform parent, AchievementDef def, bool earned)
+        static void BuildTile(Transform parent, AchievementDef def, bool earned, PlayerProfile profile)
         {
             var tile = UIFactory.MakePanel(parent, "Tile_" + def.kind, new Color(0.05f, 0.07f, 0.18f, 1f));
             var btnSp = UIFactory.LoadSprite("UI/btn_gold");
+            bool equipped = profile.equippedBadges != null && profile.equippedBadges.Contains(def.kind.ToString());
             if (btnSp != null)
             {
                 tile.sprite = btnSp;
                 tile.type = Image.Type.Sliced;
-                tile.color = earned ? def.medalColor : new Color(0.18f, 0.18f, 0.22f, 1f);
+                tile.color = equipped
+                    ? Color.Lerp(def.medalColor, Color.white, 0.4f)
+                    : (earned ? def.medalColor : new Color(0.18f, 0.18f, 0.22f, 1f));
+            }
+            if (earned)
+            {
+                tile.raycastTarget = true;
+                var btn = tile.gameObject.AddComponent<Button>();
+                btn.targetGraphic = tile;
+                btn.onClick.AddListener(() => ToggleEquip(def, profile, tile));
             }
             var icon = UIFactory.MakeIcon(tile.transform, "Icon", "Icons/" + def.medalIconKey, new Vector2(140, 140));
             icon.color = earned ? Color.white : new Color(0.4f, 0.4f, 0.4f, 0.7f);
@@ -138,7 +158,7 @@ namespace TrashRoyale.UI
 
             if (!earned)
             {
-                var lockT = UIFactory.MakeText(tile.transform, "Lock", "🔒", 60, TextAnchor.MiddleCenter);
+                var lockT = UIFactory.MakeText(tile.transform, "Lock", "X", 60, TextAnchor.MiddleCenter);
                 lockT.color = new Color(0f, 0f, 0f, 0.5f);
                 var lrt = lockT.GetComponent<RectTransform>();
                 lrt.anchorMin = new Vector2(0f, 0f);
@@ -146,6 +166,40 @@ namespace TrashRoyale.UI
                 lrt.sizeDelta = new Vector2(160, 0);
                 lrt.anchoredPosition = new Vector2(80, 0);
             }
+            else if (equipped)
+            {
+                var equippedT = UIFactory.MakeText(tile.transform, "Eq", "НА БАННЕРЕ", 24, TextAnchor.UpperRight);
+                equippedT.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+                var eqr = equippedT.GetComponent<RectTransform>();
+                eqr.anchorMin = new Vector2(0.5f, 0.7f);
+                eqr.anchorMax = new Vector2(1f, 1f);
+                eqr.offsetMin = new Vector2(0, 0);
+                eqr.offsetMax = new Vector2(-15, -8);
+            }
+        }
+
+        static void ToggleEquip(AchievementDef def, PlayerProfile profile, Image tile)
+        {
+            AudioManager.PlaySfx("click");
+            if (profile.equippedBadges == null) profile.equippedBadges = new System.Collections.Generic.List<string>();
+            string key = def.kind.ToString();
+            if (profile.equippedBadges.Contains(key))
+            {
+                profile.equippedBadges.Remove(key);
+            }
+            else
+            {
+                profile.equippedBadges.Add(key);
+                while (profile.equippedBadges.Count > 3)
+                    profile.equippedBadges.RemoveAt(0);
+            }
+            profile.Save();
+            // Cheap visual feedback: tint the tile's tone difference.
+            // The popup will re-build cleanly the next time it's opened.
+            bool nowEquipped = profile.equippedBadges.Contains(key);
+            tile.color = nowEquipped
+                ? Color.Lerp(def.medalColor, Color.white, 0.4f)
+                : def.medalColor;
         }
     }
 }

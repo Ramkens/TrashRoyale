@@ -178,18 +178,36 @@ namespace TrashRoyale.Bootstrap
             srt.anchorMax = new Vector2(0.62f, 0.95f);
             srt.offsetMin = srt.offsetMax = Vector2.zero;
 
-            // Find unlocked, in catalog order. Cap at 4 for the strip.
+            // Show equipped badges first; fallback to highest-tier
+            // unlocked when nothing is pinned. Capped at 3 like CR.
             var unlocked = _profile.unlockedAchievements ?? new System.Collections.Generic.List<string>();
-            int shown = 0;
-            for (int i = 0; i < Achievements.All.Length && shown < 4; i++)
+            var defs = new System.Collections.Generic.List<AchievementDef>();
+            if (_profile.equippedBadges != null && _profile.equippedBadges.Count > 0)
             {
-                var def = Achievements.All[i];
-                if (!unlocked.Contains(def.kind.ToString())) continue;
+                foreach (var key in _profile.equippedBadges)
+                {
+                    var def = Achievements.Find(key);
+                    if (def != null && unlocked.Contains(def.kind.ToString())) defs.Add(def);
+                    if (defs.Count >= 3) break;
+                }
+            }
+            if (defs.Count == 0)
+            {
+                for (int i = Achievements.All.Length - 1; i >= 0 && defs.Count < 3; i--)
+                {
+                    var def = Achievements.All[i];
+                    if (unlocked.Contains(def.kind.ToString())) defs.Add(def);
+                }
+            }
+            int shown = 0;
+            int slotCount = Mathf.Max(1, defs.Count);
+            foreach (var def in defs)
+            {
                 var iconImg = UIFactory.MakeIcon(strip.transform, "Medal_" + def.kind,
                     "Icons/" + def.medalIconKey, new Vector2(60, 60));
                 iconImg.color = def.medalColor;
                 var irt = iconImg.GetComponent<RectTransform>();
-                float w = 1f / 4f;
+                float w = 1f / slotCount;
                 irt.anchorMin = new Vector2(shown * w + 0.02f, 0.15f);
                 irt.anchorMax = new Vector2((shown + 1) * w - 0.02f, 0.85f);
                 irt.offsetMin = irt.offsetMax = Vector2.zero;
@@ -377,6 +395,7 @@ namespace TrashRoyale.Bootstrap
                 botDifficulty = bot.difficulty,
                 botBannerColor = bot.bannerColor,
                 botIconKey = bot.iconKey,
+                botBadgeKeys = bot.badgeKeys,
                 trophyDelta = 30
             };
             SceneManager.LoadScene("Battle");

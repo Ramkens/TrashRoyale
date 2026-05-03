@@ -20,6 +20,10 @@ namespace TrashRoyale.Bootstrap
             // ladder doesn't supply them (e.g. legacy callers).
             public Color botBannerColor = new Color(0.6f, 0.35f, 0.85f);
             public string botIconKey = "fist";
+            // Up to 3 secondary badges shown on the bot's intro banner
+            // (mirrors the player's equippedBadges list). Filled by
+            // BotLadder.PickFor; empty = no extra badges.
+            public string[] botBadgeKeys = new string[0];
         }
         public static Request Pending;
 
