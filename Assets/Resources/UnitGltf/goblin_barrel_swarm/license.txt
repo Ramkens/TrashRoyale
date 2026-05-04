@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rec room, beta barrel goblin
+* source:	https://sketchfab.com/3d-models/rec-room-beta-barrel-goblin-c6dc7614f1444c7a88a837ef4eb0eb5a
+* author:	Romeo rios vr (https://sketchfab.com/rrios2027)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Rec room, beta barrel goblin" (https://sketchfab.com/3d-models/rec-room-beta-barrel-goblin-c6dc7614f1444c7a88a837ef4eb0eb5a) by Romeo rios vr (https://sketchfab.com/rrios2027) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

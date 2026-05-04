@@ -818,7 +818,7 @@
       "targetMode": "Any",
       "targetsAir": false,
       "splashRadius": 0.0,
-      "modelKey": "goblin",
+      "modelKey": "goblin_barrel_swarm",
       "modelScale": 1.0,
       "voiceLine": "gobsay",
       "sfxVolume": 0.55
