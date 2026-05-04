@@ -229,15 +229,19 @@ namespace TrashRoyale.Bootstrap
             int playerCrowns = match != null ? match.PlayerCrowns : 0;
             int enemyCrowns = match != null ? match.EnemyCrowns : 0;
             bool won = winner == Team.Player;
+            // Practice (isPvE) is for warm-up against bots - it doesn't move
+            // wins/losses or trophies. Online (PvP) updates the win/loss
+            // tally for achievements but keeps trophies untouched (the
+            // ladder is purely cosmetic in this build).
             if (won)
             {
-                profile.RecordWin(isPvE ? trophyDelta : 0);
+                if (!isPvE) profile.RecordWin(0);
                 AudioManager.PlayOneShot("victory", Vector3.zero);
                 _hud.ShowEndScreen("ПОБЕДА!");
             }
             else
             {
-                profile.RecordLoss(isPvE ? trophyDelta : 0);
+                if (!isPvE) profile.RecordLoss(0);
                 AudioManager.PlayOneShot("defeat", Vector3.zero);
                 _hud.ShowEndScreen("ПОРАЖЕНИЕ");
             }

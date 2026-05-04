@@ -1,4 +1,11 @@
-Sketchfab "Froggy Wizards Wand" by Jarno_Marichal
-License: CC Attribution
-UID: da4783429aa14096b14c37e181d17be2
-URL: https://sketchfab.com/3d-models/da4783429aa14096b14c37e181d17be2
+Model Information:
+* title:	Cute Character
+* source:	https://sketchfab.com/3d-models/cute-character-3429342365294a63b2f7ec0f4902e540
+* author:	nomanaslamch42 (https://sketchfab.com/nomanaslamch42)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Cute Character" (https://sketchfab.com/3d-models/cute-character-3429342365294a63b2f7ec0f4902e540) by nomanaslamch42 (https://sketchfab.com/nomanaslamch42) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
