@@ -28,16 +28,6 @@ namespace TrashRoyale.Combat
                     });
                     break;
                 }
-                case "log_spell":
-                {
-                    // Log rolls along the ground from caster side. We
-                    // simulate that visually by drawing a wide low
-                    // shockwave; the damage is applied immediately to a
-                    // long capsule region in front of the impact point.
-                    FxFactory.SpawnShockwave(center, new Color(0.55f, 0.4f, 0.25f), spell.splashRadius * 1.6f);
-                    ApplyDamage(spell, center, caster, spell.damage);
-                    break;
-                }
                 case "shawarma_poison":
                 {
                     // Poison cloud: tick damage every second for 8s on

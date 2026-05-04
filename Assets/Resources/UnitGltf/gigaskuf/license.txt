@@ -1,0 +1,11 @@
+Model Information:
+* title:	Vitalya
+* source:	https://sketchfab.com/3d-models/vitalya-6229931b96534d1cb3825949c93080bb
+* author:	FiL0S0V (https://sketchfab.com/fil0s0v)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Vitalya" (https://sketchfab.com/3d-models/vitalya-6229931b96534d1cb3825949c93080bb) by FiL0S0V (https://sketchfab.com/fil0s0v) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

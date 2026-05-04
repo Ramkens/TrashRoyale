@@ -1,0 +1,11 @@
+Model Information:
+* title:	Kebab - midpoly
+* source:	https://sketchfab.com/3d-models/kebab-midpoly-9e56cc9656ae4016b96cb4bb56fe3a43
+* author:	Pierre.Bourdon (https://sketchfab.com/Pierre.Bourdon)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Kebab - midpoly" (https://sketchfab.com/3d-models/kebab-midpoly-9e56cc9656ae4016b96cb4bb56fe3a43) by Pierre.Bourdon (https://sketchfab.com/Pierre.Bourdon) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

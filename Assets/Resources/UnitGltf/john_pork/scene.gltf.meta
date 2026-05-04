@@ -1,7 +1,15 @@
 fileFormatVersion: 2
 guid: 1060fc72f561429fd7c763a4267ca296
-DefaultImporter:
+ScriptedImporter:
+  internalIDToNameTable: []
   externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+  serializedVersion: 2
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+  script: {fileID: 11500000, guid: bd9af3b40c5fc4ec9a797f54c30b6c0b, type: 3}
+  importSettings:
+    nodeNameMethod: 0
+    animationMethod: 0
+    importPhysics: 0
+    generateMipMaps: 1

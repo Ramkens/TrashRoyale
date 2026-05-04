@@ -34,6 +34,10 @@ namespace TrashRoyale.Combat
         // first emission fires after the FIRST interval (not on deploy)
         // so the player gets value from the building rather than instantly.
         float _spawnTickCd;
+        // Mini bar shown above the HP bar for spawner huts so players can
+        // see when the next imposter / unit will pop out. Only created
+        // for cards that actually tick on a spawn interval.
+        SpawnTickBar _spawnBar;
 
         public void Init(CardData data, Team t)
         {
@@ -50,6 +54,12 @@ namespace TrashRoyale.Combat
             _hpBar = HpBar.Create(this,
                 t == Team.Player ? new Color(0.18f, 0.6f, 1f) : new Color(1f, 0.3f, 0.25f),
                 2.6f, 1.6f, /*showNumber*/ true);
+            // Show a yellow countdown bar above the HP bar for huts so
+            // players can time their pushes around imposter spawns.
+            if (data.spawnOnTickInterval > 0f && !string.IsNullOrEmpty(data.spawnOnTickCardId))
+            {
+                _spawnBar = SpawnTickBar.Create(transform, new Color(1f, 0.85f, 0.2f), 2.95f, 1.4f);
+            }
             if (_deployTimer > 0f) BuildDeployRing();
             AudioManager.PlayOneShot(card.voiceLine, transform.position, card.sfxVolume);
         }
@@ -85,6 +95,11 @@ namespace TrashRoyale.Combat
                 return;
             }
 
+            // Without ticking these, a building frozen by Freeze /
+            // Lightning would stay stunRemaining > 0 forever and never
+            // attack or spawn again.
+            if (stunRemaining > 0f) stunRemaining -= dt;
+
             if (_deployTimer > 0f)
             {
                 _deployTimer -= dt;
@@ -102,6 +117,11 @@ namespace TrashRoyale.Combat
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
 
+            // While frozen, the building can't attack OR spawn its
+            // hut tick. Cooldowns still tick (above) so it doesn't
+            // catch up on missed attacks the instant the stun ends.
+            if (stunRemaining > 0f) return;
+
             // Spawner huts (e.g. Imposter Hut): emit a fresh unit every
             // `spawnOnTickInterval` seconds, indefinitely while we're
             // alive. Independent of attack logic — a hut can both spawn
@@ -115,6 +135,10 @@ namespace TrashRoyale.Combat
                 {
                     SpawnTickedUnit();
                     _spawnTickCd = card.spawnOnTickInterval;
+                }
+                if (_spawnBar != null)
+                {
+                    _spawnBar.SetProgress(_spawnTickCd / card.spawnOnTickInterval);
                 }
             }
 
@@ -168,7 +192,22 @@ namespace TrashRoyale.Combat
         {
             AudioManager.PlayOneShot("tower_destroyed", transform.position);
             FxFactory.SpawnExplosion(transform.position + Vector3.up * 0.5f, 1.0f);
+            // "spawn_on_death" mechanic for buildings (e.g. Imposter Hut
+            // dropping a fresh batch of imposters when it falls). Mirrors
+            // the Unit.cs implementation so designers can chain death
+            // payloads off any card type.
+            if (card.HasMechanic("spawn_on_death") &&
+                !string.IsNullOrEmpty(card.spawnOnDeathCardId) &&
+                card.spawnOnDeathCount > 0)
+            {
+                var child = TrashRoyale.Core.CardDatabase.Get(card.spawnOnDeathCardId);
+                if (child != null)
+                {
+                    UnitFactory.SpawnUnitsExact(child, team, transform.position, card.spawnOnDeathCount);
+                }
+            }
             if (_hpBar != null) Destroy(_hpBar.gameObject);
+            if (_spawnBar != null) Destroy(_spawnBar.gameObject);
             Destroy(gameObject);
         }
     }

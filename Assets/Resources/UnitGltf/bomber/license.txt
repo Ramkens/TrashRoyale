@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low Poly Goblin Bomber
+* source:	https://sketchfab.com/3d-models/low-poly-goblin-bomber-d1b8c4d0bf724f8a9ebbd7e0d92f9366
+* author:	Schtruvie (https://sketchfab.com/Schtruvie)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low Poly Goblin Bomber" (https://sketchfab.com/3d-models/low-poly-goblin-bomber-d1b8c4d0bf724f8a9ebbd7e0d92f9366) by Schtruvie (https://sketchfab.com/Schtruvie) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

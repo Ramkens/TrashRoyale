@@ -1,0 +1,11 @@
+Model Information:
+* title:	Goofy
+* source:	https://sketchfab.com/3d-models/goofy-a0dc4556d7b441cf9126bbd9cdf2fc23
+* author:	lissandroamorarios (https://sketchfab.com/lissandroamorarios)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Goofy" (https://sketchfab.com/3d-models/goofy-a0dc4556d7b441cf9126bbd9cdf2fc23) by lissandroamorarios (https://sketchfab.com/lissandroamorarios) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

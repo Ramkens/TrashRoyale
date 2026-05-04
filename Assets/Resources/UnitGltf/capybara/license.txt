@@ -1,4 +1,11 @@
-Sketchfab "Steampunk capybara in Lace and Corset" by GPfoxy70
-License: CC Attribution
-UID: ae2e49f2de244f47a3a9b721f2ef7f41
-URL: https://sketchfab.com/3d-models/ae2e49f2de244f47a3a9b721f2ef7f41
+Model Information:
+* title:	CAPYBARA
+* source:	https://sketchfab.com/3d-models/capybara-855220ae786e433eb3d86abf7427d590
+* author:	John3333D (https://sketchfab.com/john.....3333d)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "CAPYBARA" (https://sketchfab.com/3d-models/capybara-855220ae786e433eb3d86abf7427d590) by John3333D (https://sketchfab.com/john.....3333d) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

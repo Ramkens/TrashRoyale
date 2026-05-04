@@ -1,0 +1,11 @@
+Model Information:
+* title:	Shiba Inu Dog
+* source:	https://sketchfab.com/3d-models/shiba-inu-dog-80419f7e64e24afe97e0931b6aeee612
+* author:	Ida Faber (https://sketchfab.com/Ida..Faber)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Shiba Inu Dog" (https://sketchfab.com/3d-models/shiba-inu-dog-80419f7e64e24afe97e0931b6aeee612) by Ida Faber (https://sketchfab.com/Ida..Faber) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
