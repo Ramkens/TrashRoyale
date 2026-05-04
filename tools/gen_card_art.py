@@ -17,6 +17,11 @@ W, H = 512, 768
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CARDS_JSON = os.path.join(ROOT, "Assets/Resources/Cards/cards.json")
 OUT_DIR = os.path.join(ROOT, "Assets/Resources/CardArt")
+# Optional folder of SDXL/external raw character/spell illustrations.
+# When `<card_id>.png` exists here, it is composited into the inner-art
+# zone of the card frame INSTEAD of the procedural meme drawer. This is
+# how spell cards get a clean SDXL render with a proper card frame.
+RAW_ART_DIR = os.path.join(ROOT, "tools/art_raw")
 
 PURPLE_DARK = (51, 33, 110)
 PURPLE_BORDER = (37, 23, 86)
@@ -341,8 +346,40 @@ DRAWERS = {
 }
 
 
+def composite_raw_art(card_img, raw_path):
+    """Drop a raw illustration (SDXL / hand-drawn) into the inner-art zone
+    of an already-framed card. The inner zone is (24,100)-(W-24,H-160).
+    Raw image is letterbox-fit (preserve aspect, fill via center crop).
+    """
+    raw = Image.open(raw_path).convert("RGBA")
+    target_w = W - 48      # 488
+    target_h = H - 260     # 508
+    # Cover-fit: scale so the raw image fully covers the target box,
+    # then center-crop to that size. Avoids ugly black bars while
+    # keeping the focal subject in frame.
+    rw, rh = raw.size
+    scale = max(target_w / rw, target_h / rh)
+    new_size = (int(rw * scale), int(rh * scale))
+    raw = raw.resize(new_size, Image.LANCZOS)
+    crop_left = (raw.size[0] - target_w) // 2
+    crop_top = (raw.size[1] - target_h) // 2
+    raw = raw.crop((crop_left, crop_top, crop_left + target_w, crop_top + target_h))
+    # Apply rounded mask matching the inner gold frame.
+    mask = Image.new("L", (target_w, target_h), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle((0, 0, target_w, target_h), 24, fill=255)
+    card_img.paste(raw, (24, 100), mask)
+    return card_img
+
+
 def make_card(card):
     img = draw_frame(card)
+    raw_path = os.path.join(RAW_ART_DIR, card["id"] + ".png")
+    if os.path.isfile(raw_path):
+        # Drop SDXL/hand-drawn art into the inner zone — bypass the
+        # procedural drawer entirely.
+        composite_raw_art(img, raw_path)
+        return img
     draw_fn = DRAWERS.get(card["id"])
     if draw_fn:
         draw_fn(img)
@@ -365,7 +402,11 @@ def main():
         cid = c["id"]
         out = os.path.join(OUT_DIR, cid + ".png")
         has_drawer = cid in DRAWERS
-        if os.path.exists(out) and not has_drawer:
+        has_raw = os.path.isfile(os.path.join(RAW_ART_DIR, cid + ".png"))
+        # Always (re)render if we have a procedural drawer or a raw
+        # SDXL underlay; otherwise preserve hand-painted PNGs that were
+        # checked in directly.
+        if os.path.exists(out) and not has_drawer and not has_raw:
             skipped += 1
             continue
         img = make_card(c)
