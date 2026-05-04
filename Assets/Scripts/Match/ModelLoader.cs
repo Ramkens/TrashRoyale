@@ -38,7 +38,6 @@ namespace TrashRoyale.Match
             { "gigachad",        "gigachad"        },
             { "nyancat",         "nyancat"         },
             { "capybara",        "capybara"        },
-            { "skuf",            "skuf"            },
             { "slender",         "slender"         },
             { "streamer_girl",   "streamer_girl"   },
             { "john_pork",       "john_pork"       },
@@ -134,7 +133,6 @@ namespace TrashRoyale.Match
         static readonly Dictionary<string, string> BuildingPrefabName = new()
         {
             { "imposter_hut",  "imposter_hut"  },
-            { "inferno_tower", "inferno_tower" },
         };
 
         public static GameObject InstantiateBuilding(CardData card)
