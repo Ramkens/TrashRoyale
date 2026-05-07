@@ -105,10 +105,14 @@ namespace TrashRoyale.Bootstrap
 
         void BuildPlayerBanner()
         {
-            var banner = UIFactory.MakePanel(_canvas.transform, "Banner", new Color(0.05f, 0.07f, 0.18f, 0.9f));
+            // Solid banner (no see-through) and pulled down off the
+            // status-bar so the player name doesn't sit right at the
+            // notch. User feedback: «text везде повыше» — we keep it
+            // higher than mid-screen but with a safe top margin.
+            var banner = UIFactory.MakePanel(_canvas.transform, "Banner", new Color(0.05f, 0.07f, 0.18f, 1f));
             var brt = banner.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0.04f, 0.88f);
-            brt.anchorMax = new Vector2(0.96f, 0.97f);
+            brt.anchorMin = new Vector2(0.04f, 0.87f);
+            brt.anchorMax = new Vector2(0.96f, 0.95f);
             brt.offsetMin = brt.offsetMax = Vector2.zero;
             var btnSp = UIFactory.LoadSprite("UI/btn_gold");
             // Banner color = unlocked-banner reward (PR4) or default blue.
@@ -153,20 +157,22 @@ namespace TrashRoyale.Bootstrap
             trtt.offsetMin = trtt.offsetMax = Vector2.zero;
             _tierText.color = Color.white;
 
-            // Trophies count (right side)
+            // Trophies count (right side). Vertically centred a bit
+            // higher so it visually balances with the player name on
+            // the left, instead of slumping toward the bottom edge.
             _trophiesText = UIFactory.MakeText(banner.transform, "Trophies", _profile.trophies + " \u00A0\u00A0", 64, TextAnchor.MiddleRight);
             var ttrt = _trophiesText.GetComponent<RectTransform>();
-            ttrt.anchorMin = new Vector2(0.65f, 0.15f);
-            ttrt.anchorMax = new Vector2(0.97f, 0.85f);
+            ttrt.anchorMin = new Vector2(0.65f, 0.30f);
+            ttrt.anchorMax = new Vector2(0.97f, 0.95f);
             ttrt.offsetMin = ttrt.offsetMax = Vector2.zero;
             _trophiesText.color = new Color(1f, 0.93f, 0.4f);
 
-            var trLabel = UIFactory.MakeText(banner.transform, "TrophiesLabel", "\u041a\u0423\u0411\u041a\u0418", 18, TextAnchor.MiddleRight);
+            var trLabel = UIFactory.MakeText(banner.transform, "TrophiesLabel", "\u041a\u0423\u0411\u041a\u0418", 20, TextAnchor.MiddleRight);
             var trLR = trLabel.GetComponent<RectTransform>();
-            trLR.anchorMin = new Vector2(0.65f, 0f);
-            trLR.anchorMax = new Vector2(0.97f, 0.18f);
+            trLR.anchorMin = new Vector2(0.65f, 0.05f);
+            trLR.anchorMax = new Vector2(0.97f, 0.30f);
             trLR.offsetMin = trLR.offsetMax = Vector2.zero;
-            trLabel.color = new Color(1f, 1f, 1f, 0.7f);
+            trLabel.color = new Color(1f, 1f, 1f, 0.85f);
 
             // Tap trophies area → "Дорога Славы" popup with all arenas.
             // The trophies count + tier name + label all open the same screen.
@@ -283,8 +289,10 @@ namespace TrashRoyale.Bootstrap
                 StartPvE();
             });
             var prt = btnPvE.GetComponent<RectTransform>();
-            prt.anchorMin = new Vector2(0.10f, 0.20f);
-            prt.anchorMax = new Vector2(0.90f, 0.36f);
+            // Tighter band just above the bottom nav so the button
+            // sits higher on screen (user feedback: «text везде повыше»).
+            prt.anchorMin = new Vector2(0.10f, 0.22f);
+            prt.anchorMax = new Vector2(0.90f, 0.38f);
             prt.offsetMin = prt.offsetMax = Vector2.zero;
 
             _deckPreview = null;
@@ -308,11 +316,24 @@ namespace TrashRoyale.Bootstrap
             // "swords" tab is the active highlighted one (we're already
             // on the home screen so its tap is a no-op). Chests,
             // Pass Royale, and the laurel tab are deliberately omitted.
-            var nav = UIFactory.MakePanel(_canvas.transform, "BottomNav", new Color(0.04f, 0.06f, 0.14f, 0.92f));
+            // Solid dark plate (no see-through) so the tile bg doesn't
+            // bleed into icon labels — user said the bar looked «naplovinu
+            // prozrachne kakieto». Slight CR-blue undertone, full alpha.
+            var nav = UIFactory.MakePanel(_canvas.transform, "BottomNav", new Color(0.05f, 0.08f, 0.20f, 1f));
             var nrt = nav.GetComponent<RectTransform>();
             nrt.anchorMin = new Vector2(0, 0);
-            nrt.anchorMax = new Vector2(1, 0.13f);
+            nrt.anchorMax = new Vector2(1, 0.15f);
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
+
+            // Thin gold accent line that sits along the very top of the
+            // nav bar — CR uses this to separate the nav from the play
+            // area so the bar doesn't read as a flat slab.
+            var accent = UIFactory.MakePanel(nav.transform, "NavAccent", new Color(1f, 0.78f, 0.15f, 1f));
+            var art = accent.GetComponent<RectTransform>();
+            art.anchorMin = new Vector2(0f, 0.97f);
+            art.anchorMax = new Vector2(1f, 1f);
+            art.offsetMin = art.offsetMax = Vector2.zero;
+            accent.raycastTarget = false;
 
             // Left tab: cards icon → DeckEditor.
             BuildIconTab(
@@ -359,41 +380,41 @@ namespace TrashRoyale.Bootstrap
         // Builds one CR-style nav tab: an icon stacked over a small
         // label inside a clickable plate. The active tab gets a yellow
         // raised plate (using the existing btn_gold sprite) so it pops
-        // from the dark bar; inactive tabs are flat-transparent.
+        // from the dark bar; inactive tabs are a subtle dark plate so
+        // they read as buttons (not flat-transparent gaps).
         void BuildIconTab(Transform parent, string name, string iconResource, string label,
             float anchorMinX, float anchorMaxX, bool active, UnityEngine.Events.UnityAction onClick)
         {
             var plate = UIFactory.MakePanel(parent, name,
-                active ? new Color(1f, 0.78f, 0.15f, 1f) : new Color(0f, 0f, 0f, 0.001f));
-            if (active)
-            {
-                var btnSp = UIFactory.LoadSprite("UI/btn_gold");
-                if (btnSp != null) { plate.sprite = btnSp; plate.type = Image.Type.Sliced; plate.color = Color.white; }
-            }
+                active ? new Color(1f, 0.78f, 0.15f, 1f) : new Color(0.10f, 0.14f, 0.28f, 1f));
+            var btnSp = UIFactory.LoadSprite("UI/btn_gold");
+            if (active && btnSp != null) { plate.sprite = btnSp; plate.type = Image.Type.Sliced; plate.color = Color.white; }
             var prt = plate.GetComponent<RectTransform>();
-            prt.anchorMin = new Vector2(anchorMinX, 0.10f);
-            prt.anchorMax = new Vector2(anchorMaxX, 0.92f);
+            prt.anchorMin = new Vector2(anchorMinX, 0.06f);
+            prt.anchorMax = new Vector2(anchorMaxX, 0.94f);
             prt.offsetMin = prt.offsetMax = Vector2.zero;
 
             var btn = plate.gameObject.AddComponent<Button>();
             btn.targetGraphic = plate;
             btn.onClick.AddListener(onClick);
 
+            // Icon: top 60% of the plate so it doesn't touch the label.
             var icon = UIFactory.MakeIcon(plate.transform, name + "_Icon", iconResource, new Vector2(96, 96));
             var irt = icon.GetComponent<RectTransform>();
-            irt.anchorMin = new Vector2(0.20f, 0.30f);
-            irt.anchorMax = new Vector2(0.80f, 0.95f);
+            irt.anchorMin = new Vector2(0.22f, 0.40f);
+            irt.anchorMax = new Vector2(0.78f, 0.96f);
             irt.offsetMin = irt.offsetMax = Vector2.zero;
-            // Active tab keeps the icon white-on-yellow; inactive uses
-            // a soft white tint so the dark bar reads as muted.
-            icon.color = active ? new Color(1f, 1f, 1f, 1f) : new Color(0.92f, 0.95f, 1f, 0.85f);
+            icon.color = active ? new Color(1f, 1f, 1f, 1f) : new Color(0.95f, 0.97f, 1f, 0.95f);
 
-            var txt = UIFactory.MakeText(plate.transform, name + "_Label", label, 24, TextAnchor.MiddleCenter);
+            // Label: anchored higher in the plate (was bottom-2% which
+            // visually looked clipped); now sits in the bottom 28-percent
+            // of the plate with healthy bottom padding.
+            var txt = UIFactory.MakeText(plate.transform, name + "_Label", label, 26, TextAnchor.MiddleCenter);
             var trt = txt.GetComponent<RectTransform>();
-            trt.anchorMin = new Vector2(0f, 0.02f);
-            trt.anchorMax = new Vector2(1f, 0.30f);
+            trt.anchorMin = new Vector2(0f, 0.10f);
+            trt.anchorMax = new Vector2(1f, 0.40f);
             trt.offsetMin = trt.offsetMax = Vector2.zero;
-            txt.color = active ? new Color(1f, 0.95f, 0.6f, 1f) : new Color(0.9f, 0.95f, 1f, 0.85f);
+            txt.color = active ? new Color(1f, 0.95f, 0.6f, 1f) : new Color(0.95f, 0.97f, 1f, 0.95f);
         }
 
         // Big arena thumbnail card sandwiched between the player
@@ -410,11 +431,14 @@ namespace TrashRoyale.Bootstrap
         {
             var theme = ArenaTheme.Current(_profile.trophies);
 
-            // Outer rounded gold frame — also the tap target.
+            // Outer rounded gold frame — also the tap target. Sits in
+            // the upper half of the screen, just below the player
+            // banner. Top edge raised to leave more space for the
+            // БОЙ button below it.
             var frame = UIFactory.MakePanel(_canvas.transform, "ArenaFrame", Color.white);
             var frt = frame.GetComponent<RectTransform>();
-            frt.anchorMin = new Vector2(0.06f, 0.40f);
-            frt.anchorMax = new Vector2(0.94f, 0.85f);
+            frt.anchorMin = new Vector2(0.06f, 0.42f);
+            frt.anchorMax = new Vector2(0.94f, 0.86f);
             frt.offsetMin = frt.offsetMax = Vector2.zero;
             var goldSp = UIFactory.LoadSprite("UI/btn_gold");
             if (goldSp != null) { frame.sprite = goldSp; frame.type = Image.Type.Sliced; frame.color = Color.white; }
@@ -449,11 +473,12 @@ namespace TrashRoyale.Bootstrap
             }
 
             // Bottom-strip arena name (sits inside the gold frame, just
-            // below the inner art).
-            var name = UIFactory.MakeText(frame.transform, "ArenaName", theme.DisplayName, 36, TextAnchor.MiddleCenter);
+            // below the inner art). Pulled up off the very bottom edge
+            // so the text reads as part of the card, not its border.
+            var name = UIFactory.MakeText(frame.transform, "ArenaName", theme.DisplayName, 38, TextAnchor.MiddleCenter);
             var nrt = name.GetComponent<RectTransform>();
-            nrt.anchorMin = new Vector2(0f, 0f);
-            nrt.anchorMax = new Vector2(1f, 0.12f);
+            nrt.anchorMin = new Vector2(0f, 0.02f);
+            nrt.anchorMax = new Vector2(1f, 0.14f);
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
             name.color = new Color(0.25f, 0.15f, 0.05f);
         }
