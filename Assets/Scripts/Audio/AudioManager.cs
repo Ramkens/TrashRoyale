@@ -36,6 +36,9 @@ namespace TrashRoyale.Audio
             // wall of noise.
             { "pig_oink",       0.7f },
             { "pig_squeal",     0.8f },
+            // IShowSpeed scream is loud — trim it down a little so it
+            // sits in the same range as other voice lines.
+            { "speed_suuuui",   0.7f },
         };
 
         /// <summary>
