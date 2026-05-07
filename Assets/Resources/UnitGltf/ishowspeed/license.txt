@@ -1,0 +1,4 @@
+Model: IShowSpeed
+License: CC Attribution
+Author: Gabriel Kamado (https://sketchfab.com/Bielg3GetsNintendo)
+Source: https://sketchfab.com/3d-models/ishowspeed-849f6f5a291f42ccba866a6ae1ca7ebb

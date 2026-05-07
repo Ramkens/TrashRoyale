@@ -37,30 +37,9 @@ namespace TrashRoyale.Match
             { "shrek",               "shrek"             },
             { "gigachad",            "gigachad"          },
             { "nyancat",             "nyancat"           },
-            { "capybara",            "capybara"          },
-            { "slender",             "slender"           },
-            { "streamer_girl",       "streamer_girl"     },
-            { "john_pork",           "john_pork"         },
-            { "pepe_mage",           "pepe_mage"         },
-            { "putin_cat",           "putin_cat"         },
-            { "ronald_siu",          "ronald_siu"        },
-            // Newly added meme cards: each maps to a freshly downloaded
-            // CC-BY Sketchfab mesh (≤30k triangles) staged under
-            // Resources/UnitGltf/<id>/scene.gltf. Without these entries
-            // the units rendered as the capsule + sphere fallback.
-            { "durov",               "durov"             },
-            { "babushka",            "babushka"          },
-            { "sigma_boy",           "sigma_boy"         },
-            { "goofy_ahh",           "goofy_ahh"         },
-            { "doshik_samurai",      "doshik_samurai"    },
-            { "shashlik",            "shashlik"          },
-            { "gigaskuf",            "gigaskuf"          },
-            { "anime_waifu",         "anime_waifu"       },
-            { "trump_dance",         "trump_dance"       },
-            { "reflect_zerk",        "reflect_zerk"      },
-            { "goblin_barrel_swarm", "goblin_barrel_swarm" },
             { "bomber",              "bomber"            },
             { "doge_mage",           "doge_mage"         },
+            { "ishowspeed",          "ishowspeed"        },
         };
 
         // Target world-space height in arena units (~meters). Towers are ~3.2u
