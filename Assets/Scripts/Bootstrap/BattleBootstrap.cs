@@ -228,20 +228,27 @@ namespace TrashRoyale.Bootstrap
             var match = MatchManager.I;
             int playerCrowns = match != null ? match.PlayerCrowns : 0;
             int enemyCrowns = match != null ? match.EnemyCrowns : 0;
-            bool won = winner == Team.Player;
-            // Practice (isPvE) is for warm-up against bots - it doesn't move
-            // wins/losses or trophies. Online (PvP) updates the win/loss
-            // tally for achievements but keeps trophies untouched (the
-            // ladder is purely cosmetic in this build).
-            if (won)
+            bool isDraw = match != null && match.IsDraw;
+            bool won = !isDraw && winner == Team.Player;
+            // Trophy/W-L bookkeeping uses the per-launch trophyDelta that
+            // BattleLauncher.Pending hands us — Training matches set this
+            // to 0, ranked PvE/PvP matches set it to 30. A draw banks
+            // crowns but moves neither trophies nor W-L.
+            int delta = Mathf.Max(0, trophyDelta);
+            if (isDraw)
             {
-                if (!isPvE) profile.RecordWin(0);
+                AudioManager.PlayOneShot("defeat", Vector3.zero);
+                _hud.ShowEndScreen("НИЧЬЯ");
+            }
+            else if (won)
+            {
+                profile.RecordWin(delta);
                 AudioManager.PlayOneShot("victory", Vector3.zero);
                 _hud.ShowEndScreen("ПОБЕДА!");
             }
             else
             {
-                if (!isPvE) profile.RecordLoss(0);
+                profile.RecordLoss(delta);
                 AudioManager.PlayOneShot("defeat", Vector3.zero);
                 _hud.ShowEndScreen("ПОРАЖЕНИЕ");
             }
