@@ -142,17 +142,28 @@ namespace TrashRoyale.Combat
                 }
             }
 
-            if (_target == null || _target.isDead || _retargetCd <= 0f)
+            // Pure spawner buildings (Хата Sus etc.) have card.range == 0
+            // and card.damage == 0 — they should NEVER fire a projectile.
+            // The previous implementation only checked _target != null, which
+            // combined with attackInterval == 0 caused the hut to spit a
+            // projectile every frame (looked exactly like an inferno tower).
+            // We now gate the entire attack pipeline on having a sane
+            // weapon definition.
+            bool hasWeapon = card.range > 0f && card.attackInterval > 0f && card.damage > 0f;
+            if (hasWeapon)
             {
-                _target = CombatRegistry.FindClosestEnemy(transform.position, team,
-                    card.range, /*buildingsOnly*/ false, card.targetsAir);
-                _retargetCd = 0.3f;
-            }
+                if (_target == null || _target.isDead || _retargetCd <= 0f)
+                {
+                    _target = CombatRegistry.FindClosestEnemy(transform.position, team,
+                        card.range, /*buildingsOnly*/ false, card.targetsAir);
+                    _retargetCd = 0.3f;
+                }
 
-            if (_target != null && _attackCd <= 0f)
-            {
-                DoAttack();
-                _attackCd = card.attackInterval;
+                if (_target != null && _attackCd <= 0f)
+                {
+                    DoAttack();
+                    _attackCd = card.attackInterval;
+                }
             }
         }
 

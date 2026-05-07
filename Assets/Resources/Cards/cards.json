@@ -314,7 +314,7 @@
     {
       "id": "imposter_hut",
       "displayName": "Хата Sus",
-      "description": "Каждые 5с выходит импостер. Живёт 40с. На смерти роняет 3-х. Sus.",
+      "description": "Каждые 3с спавнит импостера. Живёт 35с. На смерти роняет 3-х. Sus.",
       "elixirCost": 4,
       "kind": "Building",
       "hp": 800.0,
@@ -333,9 +333,9 @@
       "modelScale": 1.0,
       "voiceLine": "sus",
       "sfxVolume": 0.55,
-      "lifetime": 40.0,
+      "lifetime": 35.0,
       "spawnOnTickCardId": "amongus",
-      "spawnOnTickInterval": 5.0,
+      "spawnOnTickInterval": 3.0,
       "mechanics": [
         "spawn_on_death"
       ],
