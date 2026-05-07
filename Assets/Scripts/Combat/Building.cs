@@ -99,6 +99,9 @@ namespace TrashRoyale.Combat
             // Lightning would stay stunRemaining > 0 forever and never
             // attack or spawn again.
             if (stunRemaining > 0f) stunRemaining -= dt;
+            if (rageRemaining > 0f) rageRemaining -= dt;
+            // Visual feedback (freeze tint, lightning flash, rage aura).
+            UpdateStatusFx();
 
             if (_deployTimer > 0f)
             {

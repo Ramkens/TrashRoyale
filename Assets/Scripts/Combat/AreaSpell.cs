@@ -57,6 +57,7 @@ namespace TrashRoyale.Combat
                     foreach (var d in picks)
                     {
                         FxFactory.SpawnRainbowBeam(center + Vector3.up * 4f, d.AimPos);
+                        d.FlashLightning();
                         d.TakeDamage(spell.damage);
                         if (spell.freezeStunSeconds > 0f && d.stunRemaining < spell.freezeStunSeconds)
                             d.stunRemaining = spell.freezeStunSeconds;

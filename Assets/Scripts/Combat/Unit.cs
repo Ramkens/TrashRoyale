@@ -97,6 +97,9 @@ namespace TrashRoyale.Combat
             if (stunRemaining > 0f) stunRemaining -= dt;
             if (rageRemaining > 0f) rageRemaining -= dt;
 
+            // Per-frame visual overlay (freeze / lightning / rage tint).
+            UpdateStatusFx();
+
             if (_deployTimer > 0f)
             {
                 _deployTimer -= dt;

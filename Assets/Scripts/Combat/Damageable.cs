@@ -78,5 +78,37 @@ namespace TrashRoyale.Combat
         protected abstract void OnDeath();
 
         public Vector3 AimPos => aimPoint != null ? aimPoint.position : transform.position + Vector3.up * 0.5f;
+
+        // ---- Visual status overlay ------------------------------------
+        // Single auto-managed component that tints the unit/building's
+        // mesh based on stun/rage timers. Each Damageable polls its own
+        // state every frame and lazily attaches a StatusFx helper the
+        // first time we need to display anything. Built-in updates run
+        // here (instead of inside Unit.cs) so towers / buildings get the
+        // same visual feedback for free.
+        StatusFx _statusFx;
+
+        protected void UpdateStatusFx()
+        {
+            // Lazy attach: only if there's any state we'd want to draw.
+            bool needsFx = stunRemaining > 0f || rageRemaining > 0f || phaseImmuneRemaining > 0f;
+            if (!needsFx && _statusFx == null) return;
+            if (_statusFx == null)
+            {
+                _statusFx = gameObject.AddComponent<StatusFx>();
+            }
+            _statusFx.Refresh(this);
+        }
+
+        /// <summary>
+        /// Triggers a one-shot lightning-strike flash on this entity.
+        /// Public so the lightning spell can bolt enemies for visible
+        /// feedback without having to know about StatusFx internals.
+        /// </summary>
+        public void FlashLightning()
+        {
+            if (_statusFx == null) _statusFx = gameObject.AddComponent<StatusFx>();
+            _statusFx.TriggerLightning();
+        }
     }
 }
