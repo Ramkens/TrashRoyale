@@ -269,72 +269,34 @@ namespace TrashRoyale.Bootstrap
 
         void BuildBattleCenter()
         {
-            // Big PvE button
+            // Home screen no longer shows the 8-card deck strip — the
+            // user asked to drop it ("не показывай колоду на главное
+            // экране") since editing happens through the КАРТЫ tab. The
+            // home is just: banner / arena banner / БОЙ button / nav.
+            //
+            // Big PvE button. Anchored just above the bottom nav so the
+            // arena banner above can take the full mid-screen real
+            // estate. Tap → StartPvE.
             var btnPvE = UIFactory.MakeButton(_canvas.transform, "PvE", "БОЙ ЗА КУБКИ", () =>
             {
                 AudioManager.PlaySfx("card_play");
                 StartPvE();
             });
             var prt = btnPvE.GetComponent<RectTransform>();
-            prt.anchorMin = new Vector2(0.12f, 0.42f);
-            prt.anchorMax = new Vector2(0.88f, 0.62f);
+            prt.anchorMin = new Vector2(0.10f, 0.20f);
+            prt.anchorMax = new Vector2(0.90f, 0.36f);
             prt.offsetMin = prt.offsetMax = Vector2.zero;
 
-            // Deck preview
-            var deckLabel = UIFactory.MakeText(_canvas.transform, "DeckLabel", "ТЕКУЩАЯ КОЛОДА", 28, TextAnchor.MiddleCenter);
-            var dlrt = deckLabel.GetComponent<RectTransform>();
-            dlrt.anchorMin = new Vector2(0, 0.34f);
-            dlrt.anchorMax = new Vector2(1, 0.39f);
-            dlrt.offsetMin = dlrt.offsetMax = Vector2.zero;
-            deckLabel.color = Color.white;
-
-            var preview = UIFactory.MakePanel(_canvas.transform, "DeckPreview", new Color(0, 0, 0, 0.35f));
-            var pvr = preview.GetComponent<RectTransform>();
-            pvr.anchorMin = new Vector2(0.04f, 0.16f);
-            pvr.anchorMax = new Vector2(0.96f, 0.34f);
-            pvr.offsetMin = pvr.offsetMax = Vector2.zero;
-            preview.raycastTarget = false;
-            _deckPreview = preview.transform;
-            RebuildDeckPreview();
+            _deckPreview = null;
         }
 
+        // Deck preview removed from the home screen. The DeckEditor
+        // (opened by the КАРТЫ tab) now owns the full deck UI. We keep
+        // the method as a no-op so DeckEditor can still poke us when it
+        // saves — wiring stays compatible without re-plumbing callers.
         void RebuildDeckPreview()
         {
-            if (_deckPreview == null) return;
-            for (int i = _deckPreview.childCount - 1; i >= 0; i--) Destroy(_deckPreview.GetChild(i).gameObject);
-            for (int i = 0; i < 8; i++)
-            {
-                int idx = i;
-                string id = i < _profile.deck.Count ? _profile.deck[i] : null;
-                var card = id != null ? CardDatabase.Get(id) : null;
-
-                var cell = new GameObject("Cell_" + i);
-                cell.transform.SetParent(_deckPreview, false);
-                var cr = cell.AddComponent<RectTransform>();
-                float pad = 0.012f;
-                float cellW = (1f - pad * 9f) / 8f;
-                cr.anchorMin = new Vector2(pad + idx * (cellW + pad), 0.05f);
-                cr.anchorMax = new Vector2(pad + idx * (cellW + pad) + cellW, 0.95f);
-                cr.offsetMin = cr.offsetMax = Vector2.zero;
-                var cellImg = cell.AddComponent<Image>();
-                cellImg.color = new Color(0.05f, 0.08f, 0.18f, 0.85f);
-
-                if (card != null)
-                {
-                    var art = UIFactory.MakeCardArt(cell.transform, card.id);
-                    var artRt = art.GetComponent<RectTransform>();
-                    artRt.anchorMin = new Vector2(0.05f, 0.18f);
-                    artRt.anchorMax = new Vector2(0.95f, 0.95f);
-                    artRt.offsetMin = artRt.offsetMax = Vector2.zero;
-
-                    var costTxt = UIFactory.MakeText(cell.transform, "Cost", card.elixirCost.ToString(), 26, TextAnchor.MiddleCenter);
-                    var crrt = costTxt.GetComponent<RectTransform>();
-                    crrt.anchorMin = new Vector2(0, 0);
-                    crrt.anchorMax = new Vector2(1, 0.18f);
-                    crrt.offsetMin = crrt.offsetMax = Vector2.zero;
-                    costTxt.color = new Color(1f, 0.55f, 0.95f, 1f);
-                }
-            }
+            // Intentionally empty.
         }
 
         void BuildBottomNav()
@@ -434,18 +396,43 @@ namespace TrashRoyale.Bootstrap
             txt.color = active ? new Color(1f, 0.95f, 0.6f, 1f) : new Color(0.9f, 0.95f, 1f, 0.85f);
         }
 
-        // Big arena thumbnail panel sandwiched between the player
-        // banner and the BATTLE button. It mirrors how Clash Royale
-        // shows the current arena art and acts as a tap-target into
-        // Road of Glory.
+        // Big arena thumbnail card sandwiched between the player
+        // banner and the БОЙ button. The user explicitly asked for a
+        // rounded-corner arena image ("картинки арен с закругленными
+        // краями") so we wrap the thumbnail in the gold sliced frame —
+        // its 9-slice corners are already rounded so the framed art
+        // reads as a card.
+        //
+        // Layout: outer gold frame (taps into Road of Glory), inner
+        // arena art inset by ~6%, and a short translucent strip at the
+        // bottom that holds the arena's display name.
         void BuildArenaBanner()
         {
             var theme = ArenaTheme.Current(_profile.trophies);
-            var arena = UIFactory.MakePanel(_canvas.transform, "ArenaBanner", Color.white);
+
+            // Outer rounded gold frame — also the tap target.
+            var frame = UIFactory.MakePanel(_canvas.transform, "ArenaFrame", Color.white);
+            var frt = frame.GetComponent<RectTransform>();
+            frt.anchorMin = new Vector2(0.06f, 0.40f);
+            frt.anchorMax = new Vector2(0.94f, 0.85f);
+            frt.offsetMin = frt.offsetMax = Vector2.zero;
+            var goldSp = UIFactory.LoadSprite("UI/btn_gold");
+            if (goldSp != null) { frame.sprite = goldSp; frame.type = Image.Type.Sliced; frame.color = Color.white; }
+            var btn = frame.gameObject.AddComponent<Button>();
+            btn.targetGraphic = frame;
+            btn.onClick.AddListener(() =>
+            {
+                AudioManager.PlaySfx("click");
+                RoadToGloryPopup.Open(_canvas.transform, _profile);
+            });
+
+            // Inner arena thumbnail — inset so the gold border is visible.
+            var arena = UIFactory.MakePanel(frame.transform, "ArenaThumb", Color.white);
             var art = arena.GetComponent<RectTransform>();
-            art.anchorMin = new Vector2(0.10f, 0.63f);
-            art.anchorMax = new Vector2(0.90f, 0.86f);
+            art.anchorMin = new Vector2(0.04f, 0.12f);
+            art.anchorMax = new Vector2(0.96f, 0.96f);
             art.offsetMin = art.offsetMax = Vector2.zero;
+            arena.raycastTarget = false;
             Texture2D thumbTex = !string.IsNullOrEmpty(theme.ThumbnailKey)
                 ? Resources.Load<Texture2D>("ArenaThumbs/" + theme.ThumbnailKey)
                 : null;
@@ -460,26 +447,15 @@ namespace TrashRoyale.Bootstrap
             {
                 arena.color = Color.Lerp(theme.PlayerSideTint, theme.EnemySideTint, 0.5f);
             }
-            // Translucent dark scrim along the bottom for the title.
-            var scrim = UIFactory.MakePanel(arena.transform, "Scrim", new Color(0, 0, 0, 0.55f));
-            var sr = scrim.GetComponent<RectTransform>();
-            sr.anchorMin = new Vector2(0f, 0f);
-            sr.anchorMax = new Vector2(1f, 0.30f);
-            sr.offsetMin = sr.offsetMax = Vector2.zero;
-            var name = UIFactory.MakeText(arena.transform, "ArenaName", theme.DisplayName, 38, TextAnchor.MiddleCenter);
+
+            // Bottom-strip arena name (sits inside the gold frame, just
+            // below the inner art).
+            var name = UIFactory.MakeText(frame.transform, "ArenaName", theme.DisplayName, 36, TextAnchor.MiddleCenter);
             var nrt = name.GetComponent<RectTransform>();
             nrt.anchorMin = new Vector2(0f, 0f);
-            nrt.anchorMax = new Vector2(1f, 0.30f);
+            nrt.anchorMax = new Vector2(1f, 0.12f);
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
-            name.color = new Color(1f, 0.93f, 0.45f);
-            // Tap anywhere on the banner → Road of Glory popup.
-            var btn = arena.gameObject.AddComponent<Button>();
-            btn.targetGraphic = arena;
-            btn.onClick.AddListener(() =>
-            {
-                AudioManager.PlaySfx("click");
-                RoadToGloryPopup.Open(_canvas.transform, _profile);
-            });
+            name.color = new Color(0.25f, 0.15f, 0.05f);
         }
 
         void BuildSettingsButton()
