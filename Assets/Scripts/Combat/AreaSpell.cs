@@ -28,16 +28,18 @@ namespace TrashRoyale.Combat
                     });
                     break;
                 }
-                case "shawarma_poison":
+                case "log_spell":
                 {
-                    // Poison cloud: tick damage every second for 8s on
-                    // anyone caught inside. Total spell.damage is the
-                    // cumulative number; we divide it across 8 ticks.
-                    var go = new GameObject("PoisonCloud");
-                    go.transform.position = center;
-                    var z = go.AddComponent<TickZone>();
-                    z.Init(spell, caster, center, spell.splashRadius, 8f, 1f, spell.damage / 8f, 0f, isRage: false);
-                    FxFactory.SpawnExplosion(center, spell.splashRadius);
+                    // Rolling log: spawns a moving log object that travels
+                    // forward from caster's side, knocks back grounded
+                    // units it touches and applies a brief stun. The log
+                    // mesh is a simple capsule with a wood tint; we skip a
+                    // heavy gltf so the spell stays cheap on mobile.
+                    var dir = caster == Team.Player ? Vector3.forward : Vector3.back;
+                    var go = new GameObject("LogProjectile");
+                    go.transform.position = center - dir * 1.0f;
+                    var lp = go.AddComponent<LogProjectile>();
+                    lp.Init(spell, caster, center, dir);
                     break;
                 }
                 case "freeze_spell":
@@ -247,6 +249,84 @@ namespace TrashRoyale.Combat
                     d.TakeDamage(_perTickDmg);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Travelling log used by the Log spell. Lives ~1.6s, slides forward
+    /// at constant speed, applies splash damage + brief stun + small
+    /// knockback impulse to any grounded enemy it overlaps. Air units
+    /// are ignored. Self-destructs at end of lifetime.
+    /// </summary>
+    public class LogProjectile : MonoBehaviour
+    {
+        Team _caster;
+        Vector3 _dir;
+        float _life = 1.6f;
+        float _speed = 6f;
+        float _radius;
+        float _damage;
+        float _stun = 0.4f;
+        readonly HashSet<Damageable> _hit = new();
+
+        public void Init(CardData spell, Team caster, Vector3 center, Vector3 dir)
+        {
+            _caster = caster;
+            _dir = dir.normalized;
+            _radius = Mathf.Max(0.6f, spell.splashRadius * 0.5f);
+            _damage = spell.damage;
+            transform.position = center - _dir * 1.5f;
+            transform.rotation = Quaternion.LookRotation(_dir);
+            // Visual: thick wooden capsule
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            visual.transform.SetParent(transform, false);
+            visual.transform.localRotation = Quaternion.Euler(0, 0, 90);
+            visual.transform.localScale = new Vector3(0.5f, 1.2f, 0.5f);
+            var col = visual.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+            var mr = visual.GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                mr.sharedMaterial = new Material(Shader.Find("Standard"))
+                {
+                    color = new Color(0.45f, 0.28f, 0.12f),
+                };
+            }
+        }
+
+        void Update()
+        {
+            float dt = Time.deltaTime;
+            _life -= dt;
+            transform.position += _dir * (_speed * dt);
+            transform.Rotate(_dir, 720f * dt, Space.World);
+
+            var all = CombatRegistry.All;
+            float r2 = _radius * _radius;
+            var here = transform.position; here.y = 0;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var d = all[i];
+                if (d == null || d.isDead) continue;
+                if (d.team == _caster) continue;
+                if (d.isAir) continue;
+                if (_hit.Contains(d)) continue;
+                var p = d.transform.position; p.y = 0;
+                if ((p - here).sqrMagnitude > r2) continue;
+                _hit.Add(d);
+                d.TakeDamage(_damage);
+                if (d.stunRemaining < _stun) d.stunRemaining = _stun;
+                // Tiny knockback by nudging position; full impulse path
+                // would require physics, but the visual feel of being
+                // shoved is enough for a CR-style log.
+                var u = d.GetComponent<Match.Unit>();
+                if (u != null)
+                {
+                    u.transform.position += _dir * 0.5f;
+                }
+            }
+
+            if (_life <= 0f) Destroy(gameObject);
         }
     }
 }

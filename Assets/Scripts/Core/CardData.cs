@@ -80,6 +80,10 @@ namespace TrashRoyale.Core
         public float infernoRampStartDmg;
         public float infernoRampMaxDmg;
         public float infernoRampSeconds;
+        // Movement: when true, the unit can leap over water tiles. Used by
+        // IShowSpeed and any future "jumper" character. Other ground units
+        // path around water; air units ignore the flag (always pass over).
+        public bool canJumpWater;
 
         public CardKind Kind
         {
