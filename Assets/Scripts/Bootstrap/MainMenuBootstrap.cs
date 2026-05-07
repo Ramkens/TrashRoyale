@@ -339,47 +339,99 @@ namespace TrashRoyale.Bootstrap
 
         void BuildBottomNav()
         {
+            // CR-style tab bar: 3 icon buttons inset on a dark plate.
+            // Per user spec ("вкладка с картами - колода, мечи -
+            // главный, мечи в щите - тренировка") and the reference
+            // screenshot, we ship just three tabs and the central
+            // "swords" tab is the active highlighted one (we're already
+            // on the home screen so its tap is a no-op). Chests,
+            // Pass Royale, and the laurel tab are deliberately omitted.
             var nav = UIFactory.MakePanel(_canvas.transform, "BottomNav", new Color(0.04f, 0.06f, 0.14f, 0.92f));
             var nrt = nav.GetComponent<RectTransform>();
             nrt.anchorMin = new Vector2(0, 0);
             nrt.anchorMax = new Vector2(1, 0.13f);
             nrt.offsetMin = nrt.offsetMax = Vector2.zero;
 
-            // Three-tab layout: КОЛОДА | ТРЕНИРОВКА | ДРУЗЬЯ
-            var deckBtn = UIFactory.MakeButton(nav.transform, "DeckTab", "КОЛОДА", () =>
-            {
-                AudioManager.PlaySfx("click");
-                DeckEditor.Open(_canvas.transform, _profile, RebuildDeckPreview);
-            });
-            var drt = deckBtn.GetComponent<RectTransform>();
-            drt.anchorMin = new Vector2(0.02f, 0.15f);
-            drt.anchorMax = new Vector2(0.33f, 0.85f);
-            drt.offsetMin = drt.offsetMax = Vector2.zero;
-            var deckLabel = deckBtn.GetComponentInChildren<Text>();
-            if (deckLabel != null) deckLabel.fontSize = 36;
+            // Left tab: cards icon → DeckEditor.
+            BuildIconTab(
+                nav.transform, "CardsTab",
+                iconResource: "Icons/card_play",
+                label: "КАРТЫ",
+                anchorMinX: 0.02f, anchorMaxX: 0.34f,
+                active: false,
+                onClick: () =>
+                {
+                    AudioManager.PlaySfx("click");
+                    DeckEditor.Open(_canvas.transform, _profile, RebuildDeckPreview);
+                });
 
-            var trainBtn = UIFactory.MakeButton(nav.transform, "TrainingTab", "ТРЕНИРОВКА", () =>
-            {
-                AudioManager.PlaySfx("click");
-                TrainingPopup.Open(_canvas.transform);
-            });
-            var trrt = trainBtn.GetComponent<RectTransform>();
-            trrt.anchorMin = new Vector2(0.34f, 0.15f);
-            trrt.anchorMax = new Vector2(0.66f, 0.85f);
-            trrt.offsetMin = trrt.offsetMax = Vector2.zero;
-            var trainLabel = trainBtn.GetComponentInChildren<Text>();
-            if (trainLabel != null) trainLabel.fontSize = 32;
+            // Center tab: crossed swords → main battle screen (active).
+            BuildIconTab(
+                nav.transform, "BattleTab",
+                iconResource: "Icons/crossed_swords",
+                label: "БОЙ",
+                anchorMinX: 0.34f, anchorMaxX: 0.66f,
+                active: true,
+                onClick: () =>
+                {
+                    AudioManager.PlaySfx("click");
+                    // Already on home — just bounce focus.
+                });
 
-            // "ДРУЗЬЯ" tab removed: online sync is unstable, the
-            // user asked us to either nail it or hide it, and we're
-            // shipping a single-player-first refresh. Friendly battle
-            // can come back later behind a settings toggle. The two
-            // remaining tabs grow to fill the row evenly.
-            drt.anchorMax = new Vector2(0.49f, 0.85f);
-            trrt.anchorMin = new Vector2(0.51f, 0.15f);
-            trrt.anchorMax = new Vector2(0.98f, 0.85f);
+            // Right tab: shield → Training PvE popup.
+            BuildIconTab(
+                nav.transform, "TrainingTab",
+                iconResource: "Icons/shield",
+                label: "ТРЕНИРОВКА",
+                anchorMinX: 0.66f, anchorMaxX: 0.98f,
+                active: false,
+                onClick: () =>
+                {
+                    AudioManager.PlaySfx("click");
+                    TrainingPopup.Open(_canvas.transform);
+                });
 
             BuildSettingsButton();
+        }
+
+        // Builds one CR-style nav tab: an icon stacked over a small
+        // label inside a clickable plate. The active tab gets a yellow
+        // raised plate (using the existing btn_gold sprite) so it pops
+        // from the dark bar; inactive tabs are flat-transparent.
+        void BuildIconTab(Transform parent, string name, string iconResource, string label,
+            float anchorMinX, float anchorMaxX, bool active, UnityEngine.Events.UnityAction onClick)
+        {
+            var plate = UIFactory.MakePanel(parent, name,
+                active ? new Color(1f, 0.78f, 0.15f, 1f) : new Color(0f, 0f, 0f, 0.001f));
+            if (active)
+            {
+                var btnSp = UIFactory.LoadSprite("UI/btn_gold");
+                if (btnSp != null) { plate.sprite = btnSp; plate.type = Image.Type.Sliced; plate.color = Color.white; }
+            }
+            var prt = plate.GetComponent<RectTransform>();
+            prt.anchorMin = new Vector2(anchorMinX, 0.10f);
+            prt.anchorMax = new Vector2(anchorMaxX, 0.92f);
+            prt.offsetMin = prt.offsetMax = Vector2.zero;
+
+            var btn = plate.gameObject.AddComponent<Button>();
+            btn.targetGraphic = plate;
+            btn.onClick.AddListener(onClick);
+
+            var icon = UIFactory.MakeIcon(plate.transform, name + "_Icon", iconResource, new Vector2(96, 96));
+            var irt = icon.GetComponent<RectTransform>();
+            irt.anchorMin = new Vector2(0.20f, 0.30f);
+            irt.anchorMax = new Vector2(0.80f, 0.95f);
+            irt.offsetMin = irt.offsetMax = Vector2.zero;
+            // Active tab keeps the icon white-on-yellow; inactive uses
+            // a soft white tint so the dark bar reads as muted.
+            icon.color = active ? new Color(1f, 1f, 1f, 1f) : new Color(0.92f, 0.95f, 1f, 0.85f);
+
+            var txt = UIFactory.MakeText(plate.transform, name + "_Label", label, 24, TextAnchor.MiddleCenter);
+            var trt = txt.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0f, 0.02f);
+            trt.anchorMax = new Vector2(1f, 0.30f);
+            trt.offsetMin = trt.offsetMax = Vector2.zero;
+            txt.color = active ? new Color(1f, 0.95f, 0.6f, 1f) : new Color(0.9f, 0.95f, 1f, 0.85f);
         }
 
         // Big arena thumbnail panel sandwiched between the player
