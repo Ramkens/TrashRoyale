@@ -53,7 +53,7 @@
       "hp": 580.0,
       "damage": 92.0,
       "attackInterval": 1.1,
-      "range": 5.5,
+      "range": 4.17,
       "moveSpeed": 0.7,
       "deployTime": 1.0,
       "spawnCount": 1,

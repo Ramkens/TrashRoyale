@@ -200,11 +200,32 @@ namespace TrashRoyale.Combat
 
         void AcquireTarget()
         {
-            float searchRange = card.targetMode == "BuildingsOnly" ? 9999f : 5.5f;
+            // Vision/aggro radius. Buildings-only chargers (pig, hog) see
+            // forever so they stay laser-focused on towers. Everyone else
+            // gets a tight bubble derived from their own attack range —
+            // ranged units see a smidge beyond their reach, melee gets a
+            // floor of 3.5u so they don't stand idle next to enemies they
+            // technically can't yet attack. The previous fixed 5.5u meant
+            // a melee knight at midfield could chase a ranged Pocoyo on
+            // the OTHER lane; the new derived radius keeps lanes cleaner.
             bool buildingsOnly = card.Targets == TargetMode.BuildingsOnly;
+            float searchRange;
+            if (buildingsOnly)
+            {
+                searchRange = 9999f;
+            }
+            else
+            {
+                searchRange = Mathf.Max(card.range + 0.5f, 3.5f);
+            }
             _target = CombatRegistry.FindClosestEnemy(transform.position, team, searchRange, buildingsOnly, card.targetsAir);
             if (_target == null && !buildingsOnly)
             {
+                // Fallback: nothing in sight -> walk forward until something
+                // shows up. We still call FindClosestEnemy with a huge
+                // radius so movement code knows where the river is, but
+                // attack code won't engage until the real range check
+                // passes.
                 _target = CombatRegistry.FindClosestEnemy(transform.position, team, 9999f, true, card.targetsAir);
             }
         }
