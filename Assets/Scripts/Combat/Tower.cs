@@ -22,7 +22,11 @@ namespace TrashRoyale.Combat
             base.Init(t, king ? 4824f : 3052f);
             damage = king ? 109f : 90f;
             attackInterval = king ? 1.0f : 0.8f;
-            range = king ? 7.0f : 5.5f;
+            // Trimmed CR-style ranges per user playtest feedback: the
+            // 5.5/7.0 spread felt too punishing on a 16u arena.
+            // King keeps a wider footprint than princesses so it can
+            // still cover the bridge after side towers fall.
+            range = king ? 5.0f : 4.0f;
             isBuilding = true;
             isActive = !king;
             CombatRegistry.Register(this);
