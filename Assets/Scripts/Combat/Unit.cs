@@ -295,6 +295,29 @@ namespace TrashRoyale.Combat
                 var look = Quaternion.LookRotation(new Vector3(desired.x, 0f, desired.z));
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, look, 720f * dt);
             }
+            ApplyFunnyWalk(dt, speed);
+        }
+
+        // Visual-only "funny walk" applied to IShowSpeed: bobs the model
+        // up + a sideways wobble while moving so the static gltf at least
+        // looks animated. Other units fall through harmlessly. Skips the
+        // jump arc since y is driven by the parabola during a jump.
+        float _walkPhase;
+        Transform _modelChild;
+        void ApplyFunnyWalk(float dt, float speed)
+        {
+            if (card == null) return;
+            bool isFunny = card.id == "ishowspeed";
+            if (!isFunny) return;
+            if (_modelChild == null && transform.childCount > 0) _modelChild = transform.GetChild(0);
+            if (_modelChild == null) return;
+            _walkPhase += dt * (4f + speed * 2f);
+            float bob = Mathf.Sin(_walkPhase) * 0.15f;
+            float roll = Mathf.Cos(_walkPhase) * 8f;
+            var lp = _modelChild.localPosition;
+            lp.y = bob;
+            _modelChild.localPosition = lp;
+            _modelChild.localRotation = Quaternion.Euler(0f, 0f, roll);
         }
 
         /// <summary>
