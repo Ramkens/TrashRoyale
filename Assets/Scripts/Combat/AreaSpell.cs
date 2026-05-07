@@ -28,15 +28,15 @@ namespace TrashRoyale.Combat
                     });
                     break;
                 }
-                case "log_spell":
+                case "mom_toy":
                 {
-                    // Rolling log: spawns a moving log object that travels
-                    // forward from caster's side, knocks back grounded
-                    // units it touches and applies a brief stun. The log
-                    // mesh is a simple capsule with a wood tint; we skip a
+                    // Rolling mom-toy: spawns a moving projectile that
+                    // travels forward from caster's side, knocks back
+                    // grounded units it touches and applies a brief
+                    // stun. The mesh is a simple pink capsule; we skip a
                     // heavy gltf so the spell stays cheap on mobile.
                     var dir = caster == Team.Player ? Vector3.forward : Vector3.back;
-                    var go = new GameObject("LogProjectile");
+                    var go = new GameObject("MomToyProjectile");
                     go.transform.position = center - dir * 1.0f;
                     var lp = go.AddComponent<LogProjectile>();
                     lp.Init(spell, caster, center, dir);
@@ -278,7 +278,11 @@ namespace TrashRoyale.Combat
             _damage = spell.damage;
             transform.position = center - _dir * 1.5f;
             transform.rotation = Quaternion.LookRotation(_dir);
-            // Visual: thick wooden capsule
+            // Visual: hot-pink capsule. Uses SafeShader so on Android,
+            // where Shader.Find("Standard") often returns null, the
+            // capsule still renders the intended colour instead of
+            // Hidden/InternalErrorShader's magenta. We also kill the
+            // collider so it doesn't physics-interact with anything.
             var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             visual.transform.SetParent(transform, false);
             visual.transform.localRotation = Quaternion.Euler(0, 0, 90);
@@ -288,10 +292,8 @@ namespace TrashRoyale.Combat
             var mr = visual.GetComponent<MeshRenderer>();
             if (mr != null)
             {
-                mr.sharedMaterial = new Material(Shader.Find("Standard"))
-                {
-                    color = new Color(0.45f, 0.28f, 0.12f),
-                };
+                mr.sharedMaterial = TrashRoyale.Util.SafeShader.NewOpaqueMaterial(
+                    new Color(1f, 0.46f, 0.78f));
             }
         }
 

@@ -208,9 +208,16 @@ namespace TrashRoyale.Combat
             // gets a tight bubble derived from their own attack range —
             // ranged units see a smidge beyond their reach, melee gets a
             // floor of 3.5u so they don't stand idle next to enemies they
-            // technically can't yet attack. The previous fixed 5.5u meant
-            // a melee knight at midfield could chase a ranged Pocoyo on
-            // the OTHER lane; the new derived radius keeps lanes cleaner.
+            // technically can't yet attack.
+            //
+            // Vision applies the SAME for units and buildings: when a
+            // unit's bubble doesn't see any enemy (unit OR building) it
+            // returns null and the caller drops back to MoveTowardEnemySide
+            // — the unit walks forward until something enters the bubble.
+            // Previously we had a 9999f fallback that found the closest
+            // building anywhere on the map, which made knights/pekkas
+            // sprint diagonally across lanes toward a tower they had no
+            // business seeing yet.
             bool buildingsOnly = card.Targets == TargetMode.BuildingsOnly;
             float searchRange;
             if (buildingsOnly)
@@ -222,15 +229,6 @@ namespace TrashRoyale.Combat
                 searchRange = Mathf.Max(card.range + 0.5f, 3.5f);
             }
             _target = CombatRegistry.FindClosestEnemy(transform.position, team, searchRange, buildingsOnly, card.targetsAir);
-            if (_target == null && !buildingsOnly)
-            {
-                // Fallback: nothing in sight -> walk forward until something
-                // shows up. We still call FindClosestEnemy with a huge
-                // radius so movement code knows where the river is, but
-                // attack code won't engage until the real range check
-                // passes.
-                _target = CombatRegistry.FindClosestEnemy(transform.position, team, 9999f, true, card.targetsAir);
-            }
         }
 
         void MoveTowardEnemySide(float dt)
@@ -302,8 +300,12 @@ namespace TrashRoyale.Combat
         // up + a sideways wobble while moving so the static gltf at least
         // looks animated. Other units fall through harmlessly. Skips the
         // jump arc since y is driven by the parabola during a jump.
+        // The attack swing is a separate transient that overrides the
+        // walking pose for ~AttackSwingDuration seconds after each hit.
         float _walkPhase;
         Transform _modelChild;
+        float _attackSwing; // seconds remaining of attack pose
+        const float AttackSwingDuration = 0.25f;
         void ApplyFunnyWalk(float dt, float speed)
         {
             if (card == null) return;
@@ -311,6 +313,22 @@ namespace TrashRoyale.Combat
             if (!isFunny) return;
             if (_modelChild == null && transform.childCount > 0) _modelChild = transform.GetChild(0);
             if (_modelChild == null) return;
+
+            // Attack swing dominates if active: lean forward + push the
+            // model slightly toward the target so it reads as a hit.
+            if (_attackSwing > 0f)
+            {
+                _attackSwing -= dt;
+                float t = 1f - Mathf.Clamp01(_attackSwing / AttackSwingDuration);
+                // Sine pulse — fast windup, snap, settle.
+                float pulse = Mathf.Sin(t * Mathf.PI);
+                float lunge = pulse * 0.35f;
+                float pitch = pulse * 28f;
+                _modelChild.localPosition = new Vector3(0f, 0.05f, lunge);
+                _modelChild.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+                return;
+            }
+
             _walkPhase += dt * (4f + speed * 2f);
             float bob = Mathf.Sin(_walkPhase) * 0.15f;
             float roll = Mathf.Cos(_walkPhase) * 8f;
@@ -318,6 +336,11 @@ namespace TrashRoyale.Combat
             lp.y = bob;
             _modelChild.localPosition = lp;
             _modelChild.localRotation = Quaternion.Euler(0f, 0f, roll);
+        }
+
+        public void TriggerAttackSwing()
+        {
+            _attackSwing = AttackSwingDuration;
         }
 
         /// <summary>
@@ -398,6 +421,9 @@ namespace TrashRoyale.Combat
         {
             if (_target == null || _target.isDead) return;
             AudioManager.PlayOneShot("attack_swing", transform.position);
+            // Procedural attack pose for IShowSpeed (no skeletal rig).
+            // Cheap no-op for everyone else.
+            TriggerAttackSwing();
             float dmg = ResolveOutgoingDamage();
             if (card.range > 1.6f)
             {

@@ -34,14 +34,22 @@ namespace TrashRoyale.Match
         /// </summary>
         public bool IsValidPlacement(Team team, Vector3 worldPos, CardData card)
         {
-            if (card != null && card.Kind == CardKind.Spell)
-            {
-                if (Mathf.Abs(worldPos.x) > HalfWidth) return false;
-                if (Mathf.Abs(worldPos.z) > HalfLength) return false;
-                return true;
-            }
+            // Out-of-arena always rejected.
             if (Mathf.Abs(worldPos.x) > HalfWidth) return false;
             if (Mathf.Abs(worldPos.z) > HalfLength) return false;
+
+            // Spells:
+            //   - default: anywhere on the arena (CR-style fireball / log-as-spell)
+            //   - card.placeAsUnit==true: same rules as a unit (own half
+            //     only, river off-limits, expands as towers fall). Used
+            //     by Мамина игрушка so the player can't yeet it from the
+            //     enemy back-line.
+            if (card != null && card.Kind == CardKind.Spell)
+            {
+                if (!card.placeAsUnit) return true;
+                // fall through to the unit-style placement rules below
+            }
+
             // The whole river strip is off-limits for ground placement
             // — including the bridges, since dropping a unit ON a bridge
             // bypasses the river-crossing behavior entirely.

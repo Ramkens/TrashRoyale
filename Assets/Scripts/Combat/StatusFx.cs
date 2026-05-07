@@ -138,10 +138,10 @@ namespace TrashRoyale.Combat
                 var mr = _boltGo.GetComponent<MeshRenderer>();
                 if (mr != null)
                 {
-                    mr.sharedMaterial = new Material(Shader.Find("Standard"))
-                    {
-                        color = new Color(1f, 0.95f, 0.35f),
-                    };
+                    // SafeShader so on Android the bolt actually shows
+                    // up yellow instead of falling back to error-magenta.
+                    mr.sharedMaterial = TrashRoyale.Util.SafeShader.NewOpaqueMaterial(
+                        new Color(1f, 0.95f, 0.35f));
                 }
             }
             _boltGo.SetActive(true);
@@ -172,16 +172,11 @@ namespace TrashRoyale.Combat
                     var mr = _rageRing.GetComponent<MeshRenderer>();
                     if (mr != null)
                     {
-                        var mat = new Material(Shader.Find("Standard"));
-                        mat.color = new Color(1f, 0.3f, 0.2f, 0.55f);
-                        // Make it semi-transparent.
-                        mat.SetFloat("_Mode", 3);
-                        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                        mat.SetInt("_ZWrite", 0);
-                        mat.DisableKeyword("_ALPHATEST_ON");
-                        mat.EnableKeyword("_ALPHABLEND_ON");
-                        mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                        // Translucent rage aura. SafeShader.NewTransparentMaterial uses
+                        // Sprites/Default which is always shipped, so we get proper alpha
+                        // blending on Android without relying on the Standard shader.
+                        var mat = TrashRoyale.Util.SafeShader.NewTransparentMaterial(
+                            new Color(1f, 0.3f, 0.2f, 0.55f));
                         mat.renderQueue = 3000;
                         mr.sharedMaterial = mat;
                     }
