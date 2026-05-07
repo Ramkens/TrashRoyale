@@ -89,6 +89,34 @@ namespace TrashRoyale.Bootstrap
             // art instead, exactly like Clash Royale does.
             BuildBattleCenter();
             BuildBottomNav();
+            BuildSwipeNavigator();
+        }
+
+        // Hook a global swipe-detector to the canvas so the user can
+        // page between КАРТЫ ⇄ БОЙ ⇄ ТРЕНИРОВКА by dragging horizontally
+        // (per user request «сделай возможность скрола менюшек просто
+        // тянув в бок палец»). Uses Input.touches / mouse so it works
+        // across the whole screen, including over buttons — taps still
+        // hit buttons because UGUI cancels button clicks when the
+        // pointer drags off, and stationary taps don't reach the swipe
+        // threshold.
+        void BuildSwipeNavigator()
+        {
+            var go = new GameObject("MenuSwipe");
+            go.transform.SetParent(_canvas.transform, false);
+            var handler = go.AddComponent<MenuSwipeHandler>();
+            // Swipe left  → next tab (Training).
+            handler.OnSwipeLeft = () =>
+            {
+                AudioManager.PlaySfx("click");
+                TrainingPopup.Open(_canvas.transform);
+            };
+            // Swipe right → previous tab (DeckEditor / КАРТЫ).
+            handler.OnSwipeRight = () =>
+            {
+                AudioManager.PlaySfx("click");
+                DeckEditor.Open(_canvas.transform, _profile, RebuildDeckPreview);
+            };
         }
 
         void BuildBackground()
