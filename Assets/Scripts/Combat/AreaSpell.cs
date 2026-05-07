@@ -320,7 +320,7 @@ namespace TrashRoyale.Combat
                 // Tiny knockback by nudging position; full impulse path
                 // would require physics, but the visual feel of being
                 // shoved is enough for a CR-style log.
-                var u = d.GetComponent<Match.Unit>();
+                var u = d.GetComponent<Unit>();
                 if (u != null)
                 {
                     u.transform.position += _dir * 0.5f;
