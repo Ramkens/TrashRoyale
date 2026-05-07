@@ -42,7 +42,10 @@ namespace TrashRoyale.Match
             }
             if (Mathf.Abs(worldPos.x) > HalfWidth) return false;
             if (Mathf.Abs(worldPos.z) > HalfLength) return false;
-            if (Mathf.Abs(worldPos.z) < RiverHalfThickness) return false;
+            // The whole river strip is off-limits for ground placement
+            // — including the bridges, since dropping a unit ON a bridge
+            // bypasses the river-crossing behavior entirely.
+            if (Mathf.Abs(worldPos.z) < RiverHalfThickness + 0.1f) return false;
 
             // Default: own half only.
             float zSign = team == Team.Player ? -1f : +1f;

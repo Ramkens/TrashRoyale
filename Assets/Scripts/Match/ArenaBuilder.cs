@@ -89,6 +89,31 @@ namespace TrashRoyale.Match
             river.transform.localScale = new Vector3(ArenaController.HalfWidth * 2f, 0.05f, ArenaController.RiverHalfThickness * 2f);
             river.transform.position = new Vector3(0, -0.05f, 0);
             river.GetComponent<MeshRenderer>().sharedMaterial = LitMat(_theme.RiverTint, riverTex, new Vector2(2, 1));
+
+            // Add a faint highlighted "water" overlay strip just above the
+            // river so it visually reads as impassable terrain (instead of
+            // a flat painted line). Excludes the two bridge slots so the
+            // crossable lanes look distinct.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                // Outer water (between bridge and arena edge).
+                float outerCenterX = side * (3.6f + (ArenaController.HalfWidth - 3.6f) * 0.5f);
+                float outerWidth = Mathf.Max(0.01f, ArenaController.HalfWidth - 3.6f);
+                BuildWaterPatch(outerCenterX, outerWidth, "WaterOuter");
+            }
+            // Middle water (between the two bridges).
+            BuildWaterPatch(0f, 4.0f /* 2.0 + 2.0 */, "WaterCenter");
+        }
+
+        static void BuildWaterPatch(float centerX, float width, string name)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = name;
+            UnityEngine.Object.Destroy(go.GetComponent<Collider>());
+            go.transform.localScale = new Vector3(width, 0.04f, ArenaController.RiverHalfThickness * 2f);
+            go.transform.position = new Vector3(centerX, 0.005f, 0f);
+            var mat = LitMat(_theme.RiverTint * new Color(0.85f, 0.95f, 1.1f), Tex("UI/arena_river"), new Vector2(1, 1));
+            go.GetComponent<MeshRenderer>().sharedMaterial = mat;
         }
 
         static void BuildBridges()

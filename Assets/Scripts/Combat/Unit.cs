@@ -239,16 +239,129 @@ namespace TrashRoyale.Combat
             Move(new Vector3(0f, 0f, dir), dt);
         }
 
+        // ---- Water-jump state ---------------------------------------
+        // While jumping the unit follows a parabolic arc across the
+        // river. We freeze normal movement during the arc and resume the
+        // moment the unit lands on the far bank.
+        bool _jumping;
+        Vector3 _jumpFrom;
+        Vector3 _jumpTo;
+        float _jumpProgress;
+        const float JumpDuration = 0.55f;
+        const float JumpHeight = 1.4f;
+
         void Move(Vector3 dir, float dt)
         {
+            // Active jump arc takes priority over everything: we already
+            // committed to crossing the river and shouldn't re-evaluate
+            // pathing until we land.
+            if (_jumping)
+            {
+                _jumpProgress += dt / JumpDuration;
+                float t = Mathf.Clamp01(_jumpProgress);
+                Vector3 flat = Vector3.Lerp(_jumpFrom, _jumpTo, t);
+                // y = 4*h*t*(1-t) → smooth parabola peaking at JumpHeight.
+                flat.y = 4f * JumpHeight * t * (1f - t);
+                transform.position = flat;
+                if (_jumpProgress >= 1f)
+                {
+                    _jumping = false;
+                    var p = _jumpTo; p.y = 0f;
+                    transform.position = p;
+                }
+                return;
+            }
+
             float speed = card.moveSpeed;
             if (rageRemaining > 0f) speed *= RageMultiplier;
-            transform.position += dir * speed * dt;
-            if (dir.sqrMagnitude > 0.001f)
+
+            // Water blocking: ground units that can't jump must walk to
+            // the nearest bridge before crossing the river. Air units
+            // (isAir) and "canJumpWater" units bypass this entirely.
+            // Buildings never call Move so we don't worry about them.
+            Vector3 desired = dir;
+            if (!card.isAir && !card.canJumpWater)
             {
-                var look = Quaternion.LookRotation(new Vector3(dir.x, 0f, dir.z));
+                desired = SteerAroundWater(desired);
+            }
+            else if (card.canJumpWater && !card.isAir)
+            {
+                if (TryStartWaterJump(desired)) return;
+            }
+
+            transform.position += desired * speed * dt;
+            if (desired.sqrMagnitude > 0.001f)
+            {
+                var look = Quaternion.LookRotation(new Vector3(desired.x, 0f, desired.z));
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, look, 720f * dt);
             }
+        }
+
+        /// <summary>
+        /// True for the strip <c>|z| &lt; RiverHalfThickness</c> EXCLUDING
+        /// the two bridges (centered at x = ±2.8, half-width 0.8). Used to
+        /// decide whether a ground unit's next step would land in water.
+        /// </summary>
+        static bool IsWaterAt(float x, float z)
+        {
+            if (Mathf.Abs(z) >= ArenaController.RiverHalfThickness + 0.05f) return false;
+            // Bridges are 1.6u wide centered at ±2.8 so passable strip is
+            // ±2.0..±3.6 on each side.
+            float ax = Mathf.Abs(x);
+            bool onBridge = ax >= 2.0f && ax <= 3.6f;
+            return !onBridge;
+        }
+
+        /// <summary>
+        /// Reroutes a movement direction so a non-jumper ground unit walks
+        /// to the nearest bridge instead of straight into water. We only
+        /// override the direction when the next step would actually land
+        /// in the river — units already past the river continue normally.
+        /// </summary>
+        Vector3 SteerAroundWater(Vector3 dir)
+        {
+            float lookahead = 0.6f;
+            Vector3 next = transform.position + dir.normalized * lookahead;
+            if (!IsWaterAt(next.x, next.z)) return dir;
+
+            // Aim at the bridge whose x is closest to ours.
+            float myX = transform.position.x;
+            float bridgeX = myX >= 0f ? 2.8f : -2.8f;
+            float dx = bridgeX - myX;
+            float dz = transform.position.z >= 0f ? -1f : 1f; // toward the river first
+            // If we're already at the river line, push across.
+            if (Mathf.Abs(transform.position.z) < ArenaController.RiverHalfThickness * 0.6f)
+            {
+                dz = team == Team.Player ? 1f : -1f;
+            }
+            var v = new Vector3(dx, 0f, dz);
+            if (v.sqrMagnitude < 0.001f) return dir;
+            return v.normalized;
+        }
+
+        /// <summary>
+        /// Initiates the parabolic water-jump arc when a jumper unit is
+        /// about to step into water. Picks a landing point one tile
+        /// past the river on the far bank, locked to the unit's current
+        /// x so the jump looks deliberate. Returns true when a jump was
+        /// started (caller must early-out so we don't double-move this
+        /// frame).
+        /// </summary>
+        bool TryStartWaterJump(Vector3 dir)
+        {
+            float lookahead = 0.6f;
+            Vector3 next = transform.position + dir.normalized * lookahead;
+            if (!IsWaterAt(next.x, next.z)) return false;
+            float farZ = team == Team.Player
+                ? ArenaController.RiverHalfThickness + 0.6f
+                : -(ArenaController.RiverHalfThickness + 0.6f);
+            _jumpFrom = transform.position; _jumpFrom.y = 0f;
+            _jumpTo = new Vector3(transform.position.x, 0f, farZ);
+            _jumpProgress = 0f;
+            _jumping = true;
+            // Trigger one-shot voice flair if the card has a per-jump
+            // line; otherwise stay silent.
+            return true;
         }
 
         void FaceTarget(Vector3 dir)
