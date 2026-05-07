@@ -21,6 +21,21 @@ namespace TrashRoyale.Match
         public float DoubleElixirAt = 60f;
         public float TripleElixirAt = 30f;
         public float TimeRemaining { get; private set; }
+
+        // ---- Overtime ----
+        // When the regulation 3-minute clock expires with crowns still
+        // tied (and no king has fallen), the match drops into Overtime
+        // instead of the old "lowest king HP wins" tiebreak. During
+        // Overtime the elixir regen multiplier ramps from TripleElixir
+        // (3×) up to a cap of 7× — every OvertimeRampStepSeconds (30s)
+        // in OT, multiplier += 1. After OvertimeMaxSeconds (120s) the
+        // match is force-ended as a draw if nobody scored a tower.
+        public const float OvertimeMaxSeconds = 120f;
+        public const float OvertimeRampStepSeconds = 30f;
+        public const float OvertimeStartMultiplier = 3f;
+        public const float OvertimeMaxMultiplier = 7f;
+        public float OvertimeElapsed { get; private set; }
+        public float OvertimeElixirMultiplier { get; private set; } = OvertimeStartMultiplier;
         // Extended from 3s to 5s in PR3 to fit the CR-style banner-reveal
         // intro animation. Last 3 seconds are still the big "3..2..1.. GO!"
         // countdown — the first 2 seconds slide in player + opponent banners.
@@ -33,6 +48,11 @@ namespace TrashRoyale.Match
 
         public int PlayerCrowns { get; private set; }
         public int EnemyCrowns { get; private set; }
+
+        // True when the match ended without a winner (overtime ran the
+        // full clock without either side breaking the tie). BattleBootstrap
+        // uses this to credit/dock zero trophies and show "НИЧЬЯ".
+        public bool IsDraw { get; private set; }
 
         public Action<Team> OnMatchEnded;
         public Action<Tower> OnTowerDown;
@@ -59,6 +79,9 @@ namespace TrashRoyale.Match
             TimeRemaining = MatchDurationSeconds;
             PlayerCrowns = 0;
             EnemyCrowns = 0;
+            OvertimeElapsed = 0f;
+            OvertimeElixirMultiplier = OvertimeStartMultiplier;
+            IsDraw = false;
         }
 
         void Update()
@@ -75,6 +98,25 @@ namespace TrashRoyale.Match
                 return;
             }
             if (Phase == MatchPhase.Ended) return;
+
+            // Overtime phase doesn't decrement TimeRemaining further —
+            // we drive its own elapsed timer instead so the HUD shows
+            // OT countup rather than negative time.
+            if (Phase == MatchPhase.Overtime)
+            {
+                OvertimeElapsed += dt;
+                int ramps = Mathf.FloorToInt(OvertimeElapsed / OvertimeRampStepSeconds);
+                OvertimeElixirMultiplier = Mathf.Min(
+                    OvertimeStartMultiplier + ramps,
+                    OvertimeMaxMultiplier);
+                PlayerElixir.Tick(dt, Phase, OvertimeElixirMultiplier);
+                EnemyElixir.Tick(dt, Phase, OvertimeElixirMultiplier);
+                if (OvertimeElapsed >= OvertimeMaxSeconds)
+                {
+                    EndAsDraw();
+                }
+                return;
+            }
 
             TimeRemaining -= dt;
             if (Phase == MatchPhase.SingleElixir && TimeRemaining <= MatchDurationSeconds - 60f) Phase = MatchPhase.DoubleElixir;
@@ -206,9 +248,26 @@ namespace TrashRoyale.Match
 
         void EndOnTime()
         {
-            if (PlayerCrowns > EnemyCrowns) EndMatch(Team.Player);
-            else if (EnemyCrowns > PlayerCrowns) EndMatch(Team.Enemy);
-            else EndMatch(LowestKingHpTeam());
+            // Crowns broken -> normal time-up win.
+            if (PlayerCrowns > EnemyCrowns) { EndMatch(Team.Player); return; }
+            if (EnemyCrowns > PlayerCrowns) { EndMatch(Team.Enemy); return; }
+            // Crowns tied at the end of regulation -> CR-style overtime.
+            // Whoever takes a tower (or burns the king) first wins.
+            // OT also has a hard ceiling (OvertimeMaxSeconds) so the
+            // match resolves as a draw if absolutely no one scores.
+            Phase = MatchPhase.Overtime;
+            OvertimeElapsed = 0f;
+            OvertimeElixirMultiplier = OvertimeStartMultiplier;
+        }
+
+        void EndAsDraw()
+        {
+            if (Phase == MatchPhase.Ended) return;
+            // Pick the lower-king-hp side as the "nominal" winner so the
+            // UI flow still has a Team to color the result screen with;
+            // BattleBootstrap reads IsDraw and overrides the title text.
+            IsDraw = true;
+            EndMatch(LowestKingHpTeam());
         }
 
         Team LowestKingHpTeam()
