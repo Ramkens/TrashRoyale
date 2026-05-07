@@ -22,11 +22,12 @@ namespace TrashRoyale.Combat
             base.Init(t, king ? 4824f : 3052f);
             damage = king ? 109f : 90f;
             attackInterval = king ? 1.0f : 0.8f;
-            // 2.5x reduction from the legacy 5.5 / 7.0 spread per user
-            // request (5.5 / 2.5 ≈ 2.2, 7.0 / 2.5 ≈ 2.8). Defensive
-            // buildings (cannon/tesla/totem) sit at 2.8-3.0 so towers
-            // now feel proportional, not oppressive.
-            range = king ? 2.8f : 2.2f;
+            // CR-faithful tower ranges. Princess covers the bridge and
+            // a chunk of the lane; king reaches farther so it can still
+            // defend after the side towers fall. Defensive *buildings*
+            // (cannon/tesla/totem) are the only things trimmed to ~3u
+            // via cards.json — towers shoot like real Clash Royale.
+            range = king ? 7.0f : 5.5f;
             isBuilding = true;
             isActive = !king;
             CombatRegistry.Register(this);
