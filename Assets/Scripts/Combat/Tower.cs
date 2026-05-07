@@ -42,6 +42,8 @@ namespace TrashRoyale.Combat
             // Without ticking these, a tower frozen by Freeze / Lightning
             // would stay stunRemaining > 0 forever, never re-attack.
             if (stunRemaining > 0f) stunRemaining -= dt;
+            if (rageRemaining > 0f) rageRemaining -= dt;
+            UpdateStatusFx();
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
             // Freeze / Lightning lock the tower out of attacking but
