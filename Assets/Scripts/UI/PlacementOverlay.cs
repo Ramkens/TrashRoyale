@@ -25,6 +25,11 @@ namespace TrashRoyale.UI
         GameObject _ring;
         Material _ringMat;
         Transform _ringT;
+        // Secondary ring shown only for Building cards: previews the
+        // weapon's attack-range circle so players can plan defenses.
+        GameObject _rangeRing;
+        Material _rangeRingMat;
+        Transform _rangeRingT;
         bool _built;
 
         public static PlacementOverlay Create()
@@ -40,13 +45,41 @@ namespace TrashRoyale.UI
             gameObject.SetActive(true);
             if (_ring != null)
             {
+                // Cursor ring scale: spells use their splashRadius, units
+                // use the spawnRadius (or a small floor so single-spawns
+                // are still visible), buildings use the deploy footprint.
                 float scale = 1.2f;
-                if (card != null && card.Kind == CardKind.Spell && card.splashRadius > 0.1f)
-                    scale = card.splashRadius * 2f;
+                if (card != null)
+                {
+                    if (card.Kind == CardKind.Spell && card.splashRadius > 0.1f)
+                        scale = card.splashRadius * 2f;
+                    else if (card.Kind == CardKind.Unit)
+                        scale = Mathf.Max(1.0f, card.spawnRadius * 2f + 0.6f);
+                    else if (card.Kind == CardKind.Building)
+                        scale = 1.4f;
+                }
                 _ringT.localScale = new Vector3(scale, 0.02f, scale);
                 _ringMat.color = card != null && card.Kind == CardKind.Spell
                     ? new Color(1f, 0.6f, 0.2f, 0.55f)
                     : new Color(1f, 1f, 1f, 0.85f);
+            }
+            // Building cards get an extra translucent ring at
+            // 2*card.range showing where their weapon reaches. Hidden
+            // for non-buildings or buildings without a weapon.
+            if (_rangeRing != null)
+            {
+                bool show = card != null
+                    && card.Kind == CardKind.Building
+                    && card.range > 0.1f
+                    && card.attackInterval > 0.05f
+                    && card.damage > 0.1f;
+                _rangeRing.SetActive(show);
+                if (show)
+                {
+                    float diameter = card.range * 2f;
+                    _rangeRingT.localScale = new Vector3(diameter, 0.02f, diameter);
+                    _rangeRingMat.color = new Color(1f, 0.85f, 0.35f, 0.32f);
+                }
             }
         }
 
@@ -58,7 +91,8 @@ namespace TrashRoyale.UI
         public void SetCursor(Vector3 worldPos, bool valid)
         {
             if (_ring == null) return;
-            _ringT.position = new Vector3(worldPos.x, 0.06f, worldPos.z);
+            var p = new Vector3(worldPos.x, 0.06f, worldPos.z);
+            _ringT.position = p;
             // Tint the ring red when hovering an invalid spot so the player gets
             // immediate feedback without having to read the floor overlay.
             if (_ringMat != null)
@@ -71,6 +105,13 @@ namespace TrashRoyale.UI
                 {
                     _ringMat.color = new Color(1f, 1f, 1f, 0.9f);
                 }
+            }
+            // Track the building range ring at the same cursor position so
+            // it feels like a single "placement preview" anchored under
+            // the finger.
+            if (_rangeRing != null && _rangeRing.activeSelf)
+            {
+                _rangeRingT.position = p;
             }
         }
 
@@ -114,6 +155,18 @@ namespace TrashRoyale.UI
             _ringMat = SafeShader.NewTransparentMaterial(new Color(1f, 1f, 1f, 0.85f));
             _ring.GetComponent<MeshRenderer>().sharedMaterial = _ringMat;
             _ringT = _ring.transform;
+
+            // Larger amber ring used by buildings to preview attack range.
+            _rangeRing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            _rangeRing.name = "BuildingRangeRing";
+            _rangeRing.transform.SetParent(transform, false);
+            _rangeRing.transform.localScale = new Vector3(4f, 0.02f, 4f);
+            _rangeRing.transform.localPosition = new Vector3(0, 0.05f, 0);
+            Object.Destroy(_rangeRing.GetComponent<Collider>());
+            _rangeRingMat = SafeShader.NewTransparentMaterial(new Color(1f, 0.85f, 0.35f, 0.32f));
+            _rangeRing.GetComponent<MeshRenderer>().sharedMaterial = _rangeRingMat;
+            _rangeRingT = _rangeRing.transform;
+            _rangeRing.SetActive(false);
         }
 
         void UpdateForbiddenCells(CardData card)

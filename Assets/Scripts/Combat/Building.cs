@@ -61,7 +61,36 @@ namespace TrashRoyale.Combat
                 _spawnBar = SpawnTickBar.Create(transform, new Color(1f, 0.85f, 0.2f), 2.95f, 1.4f);
             }
             if (_deployTimer > 0f) BuildDeployRing();
+            // Persistent attack-range ring (only for buildings that
+            // actually shoot — pure spawners like Хата Sus skip this).
+            if (data.range > 0.1f && data.attackInterval > 0.05f && data.damage > 0.1f)
+            {
+                BuildAttackRangeRing();
+            }
             AudioManager.PlayOneShot(card.voiceLine, transform.position, card.sfxVolume);
+        }
+
+        /// <summary>
+        /// Renders a translucent amber disc on the floor showing the
+        /// building's attack reach. Stays for the building's lifetime so
+        /// the player can plan around it. Tinted slightly more intense
+        /// for the local player than for the enemy so friendly defenses
+        /// pop visually.
+        /// </summary>
+        void BuildAttackRangeRing()
+        {
+            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = "AttackRangeRing";
+            DestroyImmediate(ring.GetComponent<Collider>());
+            ring.transform.SetParent(transform, false);
+            float diameter = card.range * 2f;
+            ring.transform.localScale = new Vector3(diameter, 0.02f, diameter);
+            ring.transform.localPosition = new Vector3(0, 0.04f, 0);
+            var c = team == Team.Player
+                ? new Color(0.4f, 0.85f, 1f, 0.18f)
+                : new Color(1f, 0.45f, 0.45f, 0.18f);
+            ring.GetComponent<MeshRenderer>().sharedMaterial =
+                SafeShader.NewTransparentMaterial(c);
         }
 
         void BuildDeployRing()
