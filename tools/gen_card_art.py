@@ -356,8 +356,10 @@ SPELL_EMOJI = {
     "lightning_spell": ("⚡", (245, 220, 60)),
     "rage_spell":      ("😡", (210, 50, 80)),
     "shawarma_poison": ("🥙", (130, 70, 35)),
-    # Old log_spell removed but keep entry harmless if anyone resurrects it.
-    "log_spell":       ("🪵", (120, 80, 40)),
+    # Old log_spell removed; replaced by mom_toy which uses a raw
+    # underlay (tools/art_raw/mom_toy.png), so we don't need an emoji
+    # tile for it. Entries here are FALLBACKS for spells without raw
+    # art; mom_toy bypasses this map via the raw-art branch.
 }
 
 
@@ -449,17 +451,19 @@ def composite_raw_art(card_img, raw_path):
 
 def make_card(card):
     img = draw_frame(card)
-    # Spells get a flat coloured backdrop + giant emoji glyph. They look
-    # much more readable than SDXL stock-fantasy renders at small in-hand
-    # sizes and match how Clash Royale itself draws spell tiles.
-    if card["id"] in SPELL_EMOJI:
-        draw_spell_emoji(img, card)
-        return img
+    # Priority order:
+    #   1. Raw underlay in tools/art_raw/<id>.png — wins over everything
+    #      else so user-supplied art (e.g. rage / freeze / lightning /
+    #      fireball / mom_toy reference images) always renders properly.
+    #   2. Spell emoji-tile fallback for spells that don't have raw art.
+    #   3. Hand-coded DRAWERS entry.
+    #   4. Generic meme drawer.
     raw_path = os.path.join(RAW_ART_DIR, card["id"] + ".png")
     if os.path.isfile(raw_path):
-        # Drop SDXL/hand-drawn art into the inner zone — bypass the
-        # procedural drawer entirely.
         composite_raw_art(img, raw_path)
+        return img
+    if card["id"] in SPELL_EMOJI:
+        draw_spell_emoji(img, card)
         return img
     draw_fn = DRAWERS.get(card["id"])
     if draw_fn:

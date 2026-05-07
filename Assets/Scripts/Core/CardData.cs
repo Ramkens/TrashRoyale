@@ -85,6 +85,13 @@ namespace TrashRoyale.Core
         // path around water; air units ignore the flag (always pass over).
         public bool canJumpWater;
 
+        // For SPELL cards. When true, the spell is restricted to the
+        // caster's deployment zone (own half + bridges if a tower is
+        // down) — same rules as a unit. Used by Мамина игрушка so a
+        // throwable melee-spell can't be dropped on the enemy side
+        // directly. Default = false (vanilla CR-style "anywhere" spell).
+        public bool placeAsUnit;
+
         public CardKind Kind
         {
             get
