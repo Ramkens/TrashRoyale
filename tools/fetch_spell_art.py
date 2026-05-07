@@ -29,7 +29,8 @@ SPELLS = {
     "freeze_spell": ("Заморозка", "Freeze"),
     "lightning_spell": ("Молния", "Lightning"),
     "rage_spell": ("Ярость", "Rage"),
-    "mom_toy": ("Бочка_варваров", "Barbarian_Barrel"),
+    # mom_toy is intentionally hand-curated (pink toy / chompers theme) —
+    # do NOT replace it with the CR Barbarian Barrel render here.
 }
 
 # Direct card-render URLs as a last-resort fallback. These are the
