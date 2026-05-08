@@ -18,7 +18,16 @@ namespace TrashRoyale.AI
 
             _decisionCooldown -= Time.deltaTime;
             if (_decisionCooldown > 0f) return;
-            _decisionCooldown = Mathf.Lerp(2.5f, 0.7f, Difficulty);
+            // In Overtime the bot's elixir regens 3-7× faster, so we
+            // also tighten the decision cooldown so it actually spends
+            // those resources instead of sitting on a full bar (this
+            // is what made the opponent look like it "stopped playing"
+            // during OT — the loop was firing at the same rate but
+            // most checks ended in "nothing affordable yet" because
+            // the previous play had already drained their bar).
+            _decisionCooldown = match.Phase == MatchPhase.Overtime
+                ? Mathf.Lerp(1.3f, 0.4f, Difficulty)
+                : Mathf.Lerp(2.5f, 0.7f, Difficulty);
 
             var deck = match.EnemyDeck;
             if (deck == null) return;

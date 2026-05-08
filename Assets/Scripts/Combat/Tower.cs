@@ -55,7 +55,17 @@ namespace TrashRoyale.Combat
             // still let cooldowns tick so it doesn't fire instantly the
             // moment the stun ends.
             if (stunRemaining > 0f) return;
-            if (_target == null || _target.isDead || _retargetCd <= 0f)
+            // Sticky targeting: hold the current live target until it
+            // dies or walks out of range, instead of switching to
+            // whoever's closest every 0.3s. Matches CR behavior.
+            bool targetGone = _target == null || _target.isDead;
+            if (!targetGone && _target != null)
+            {
+                var off = _target.transform.position - transform.position;
+                off.y = 0f;
+                if (off.sqrMagnitude > range * range) targetGone = true;
+            }
+            if (targetGone)
             {
                 _target = CombatRegistry.FindClosestEnemy(transform.position, team, range, false, true);
                 _retargetCd = 0.3f;

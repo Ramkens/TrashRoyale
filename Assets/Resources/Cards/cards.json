@@ -42,7 +42,6 @@
       "splashRadius": 0.0,
       "modelKey": "pig",
       "modelScale": 1.0,
-      "modelEulerY": 45.0,
       "voiceLine": "pig_oink"
     },
     {
@@ -51,7 +50,7 @@
       "description": "Камерамен расстреливает цели лазером. Скибиди-доп-доп-йес-йес.",
       "elixirCost": 4,
       "kind": "Unit",
-      "hp": 580.0,
+      "hp": 730.0,
       "damage": 92.0,
       "attackInterval": 1.1,
       "range": 4.17,
@@ -276,7 +275,7 @@
       "hp": 640.0,
       "damage": 105.0,
       "attackInterval": 0.8,
-      "range": 3.0,
+      "range": 5.4,
       "moveSpeed": 0.0,
       "deployTime": 1.0,
       "spawnCount": 1,
@@ -299,7 +298,7 @@
       "hp": 600.0,
       "damage": 92.0,
       "attackInterval": 0.7,
-      "range": 3.0,
+      "range": 5.4,
       "moveSpeed": 0.0,
       "deployTime": 1.0,
       "spawnCount": 1,
@@ -432,7 +431,7 @@
       "isAir": false,
       "targetMode": "Any",
       "targetsAir": false,
-      "splashRadius": 1.4,
+      "splashRadius": 0.6,
       "modelKey": "bomber",
       "modelScale": 1.0,
       "voiceLine": "fireball_boom"
@@ -454,7 +453,7 @@
       "isAir": false,
       "targetMode": "Any",
       "targetsAir": true,
-      "splashRadius": 1.4,
+      "splashRadius": 0.6,
       "modelKey": "doge_mage",
       "modelScale": 1.0,
       "voiceLine": "sigma"
@@ -468,7 +467,7 @@
       "hp": 620.0,
       "damage": 90.0,
       "attackInterval": 0.9,
-      "range": 2.8,
+      "range": 5.04,
       "moveSpeed": 0.0,
       "deployTime": 1.0,
       "spawnCount": 1,
@@ -481,6 +480,29 @@
       "modelScale": 1.0,
       "voiceLine": "tower_shoot",
       "lifetime": 45.0
+    },
+    {
+      "id": "imposter_army",
+      "displayName": "Армия Импостеров",
+      "description": "15 маленьких импостеров в одной куче. Сус-сус-сус. Спавн-крик приглушён.",
+      "elixirCost": 3,
+      "kind": "Unit",
+      "hp": 75.0,
+      "damage": 55.0,
+      "attackInterval": 1.0,
+      "range": 1.0,
+      "moveSpeed": 1.1,
+      "deployTime": 1.0,
+      "spawnCount": 15,
+      "spawnRadius": 1.6,
+      "isAir": false,
+      "targetMode": "Any",
+      "targetsAir": false,
+      "splashRadius": 0.0,
+      "modelKey": "amongus",
+      "modelScale": 0.6,
+      "voiceLine": "sus",
+      "sfxVolume": 0.18
     }
   ]
 }

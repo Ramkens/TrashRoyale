@@ -129,7 +129,15 @@ namespace TrashRoyale.Combat
             if (_attackCd > 0f) _attackCd -= dt;
             if (_retargetCd > 0f) _retargetCd -= dt;
 
-            if (_target == null || _target.isDead || _retargetCd <= 0f)
+            // Sticky targeting: once we're locked on a live target we
+            // do NOT switch to a closer one mid-attack. The original
+            // code re-acquired every 0.4s which made melee units
+            // pirouette between two equidistant attackers and never
+            // commit to a kill. We only re-acquire when the current
+            // target is gone (dead/null). Stun is handled above by
+            // the early return so a stunned attacker can't snipe a
+            // new closer enemy either.
+            if (_target == null || _target.isDead)
             {
                 AcquireTarget();
                 _retargetCd = 0.4f;
