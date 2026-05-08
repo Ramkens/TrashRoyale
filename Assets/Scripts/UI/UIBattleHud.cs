@@ -187,25 +187,46 @@ namespace TrashRoyale.UI
                 if (match.Phase == MatchPhase.Countdown)
                 {
                     _timerText.text = Mathf.CeilToInt(match.CountdownRemaining).ToString();
+                    _timerText.color = Color.white;
+                }
+                else if (match.Phase == MatchPhase.Overtime)
+                {
+                    // Overtime counts DOWN from OvertimeMaxSeconds so the
+                    // player can see how long they have left to break the
+                    // tie before the match resolves as a draw.
+                    int otLeft = Mathf.Max(0, Mathf.CeilToInt(
+                        MatchManager.OvertimeMaxSeconds - match.OvertimeElapsed));
+                    _timerText.text = $"OT {otLeft / 60}:{otLeft % 60:00}";
+                    _timerText.color = new Color(1f, 0.55f, 0.25f);
                 }
                 else
                 {
                     int sec = Mathf.Max(0, Mathf.CeilToInt(match.TimeRemaining));
                     _timerText.text = $"{sec / 60}:{sec % 60:00}";
+                    _timerText.color = Color.white;
                 }
             }
             if (_crownsText != null) _crownsText.text = $"{match.PlayerCrowns} - {match.EnemyCrowns}";
             if (_phaseText != null)
             {
-                _phaseText.text = match.Phase switch
+                if (match.Phase == MatchPhase.Overtime)
                 {
-                    MatchPhase.Countdown => "Готовься!",
-                    MatchPhase.SingleElixir => "",
-                    MatchPhase.DoubleElixir => "x2 Эликсир!",
-                    MatchPhase.TripleElixir => "x3 Эликсир!!! Овертайм скоро!",
-                    MatchPhase.Overtime => "Овертайм!",
-                    _ => ""
-                };
+                    // Show the live ramping multiplier so the player knows
+                    // the regen has kicked up to x4 / x5 / x6 / x7.
+                    int mult = Mathf.RoundToInt(match.OvertimeElixirMultiplier);
+                    _phaseText.text = $"Овертайм! x{mult} эликсир";
+                }
+                else
+                {
+                    _phaseText.text = match.Phase switch
+                    {
+                        MatchPhase.Countdown => "Готовься!",
+                        MatchPhase.SingleElixir => "",
+                        MatchPhase.DoubleElixir => "x2 Эликсир!",
+                        MatchPhase.TripleElixir => "x3 Эликсир!!! Овертайм скоро!",
+                        _ => ""
+                    };
+                }
             }
 
             for (int i = 0; i < 4; i++)

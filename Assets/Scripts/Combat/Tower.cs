@@ -22,6 +22,11 @@ namespace TrashRoyale.Combat
             base.Init(t, king ? 4824f : 3052f);
             damage = king ? 109f : 90f;
             attackInterval = king ? 1.0f : 0.8f;
+            // CR-faithful tower ranges. Princess covers the bridge and
+            // a chunk of the lane; king reaches farther so it can still
+            // defend after the side towers fall. Defensive *buildings*
+            // (cannon/tesla/totem) are the only things trimmed to ~3u
+            // via cards.json — towers shoot like real Clash Royale.
             range = king ? 7.0f : 5.5f;
             isBuilding = true;
             isActive = !king;
@@ -50,7 +55,17 @@ namespace TrashRoyale.Combat
             // still let cooldowns tick so it doesn't fire instantly the
             // moment the stun ends.
             if (stunRemaining > 0f) return;
-            if (_target == null || _target.isDead || _retargetCd <= 0f)
+            // Sticky targeting: hold the current live target until it
+            // dies or walks out of range, instead of switching to
+            // whoever's closest every 0.3s. Matches CR behavior.
+            bool targetGone = _target == null || _target.isDead;
+            if (!targetGone && _target != null)
+            {
+                var off = _target.transform.position - transform.position;
+                off.y = 0f;
+                if (off.sqrMagnitude > range * range) targetGone = true;
+            }
+            if (targetGone)
             {
                 _target = CombatRegistry.FindClosestEnemy(transform.position, team, range, false, true);
                 _retargetCd = 0.3f;

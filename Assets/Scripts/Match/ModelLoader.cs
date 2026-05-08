@@ -26,10 +26,14 @@ namespace TrashRoyale.Match
         // are appended as we wire up Sketchfab CC-BY meshes for new
         // meme units; keeping them in this map lets InstantiateUnit pick
         // the real glTF prefab instead of the primitive fallback.
+        // Pig is intentionally NOT in this dict: the lowpoly Sketchfab
+        // pig has a stacked Sketchfab+FBX matrix pair that cancels out
+        // funny — the result faces a non-axis direction that no clean
+        // modelEulerY can fix. Using the chunky pink primitive build
+        // instead guarantees the snout points at the enemy lane.
         static readonly Dictionary<string, string> PrefabName = new()
         {
             { "knight",              "knight"            },
-            { "pig",                 "pig"               },
             { "skibidi",             "skibidi_cameraman" },
             { "pocoyo",              "pocoyo"            },
             { "amongus",             "amongus"           },
@@ -106,12 +110,14 @@ namespace TrashRoyale.Match
                 case "skibidi":  BuildSkibidi(go); break;
                 case "pocoyo":   BuildPocoyo(go); break;
                 case "amongus":  BuildAmongUs(go); break;
+                case "imposter_army": BuildAmongUs(go); break;
                 case "cheems":   BuildCheems(go); break;
                 case "shrek":    BuildShrek(go); break;
                 case "gigachad": BuildGigachad(go); break;
                 case "nyancat":  BuildNyanCat(go); break;
                 case "bomber":   BuildBomber(go); break;
                 case "doge_mage": BuildDogeMage(go); break;
+                case "ishowspeed": BuildIShowSpeed(go); break;
                 default:         BuildGeneric(go, card); break;
             }
             return go;
@@ -167,7 +173,17 @@ namespace TrashRoyale.Match
         static GameObject BuildFromPrefab(CardData card, GameObject prefab)
         {
             var root = new GameObject(card.id);
-            var inst = Object.Instantiate(prefab, root.transform);
+            // Yaw wrapper: a clean child of root with no inherited rotation.
+            // We apply the designer-tunable modelEulerY (and X/Z) on THIS
+            // wrapper so it always rotates around true world axes — even
+            // when the imported glTF prefab carries its own non-trivial
+            // root matrix (Sketchfab+FBX matrix pairs that don't cancel
+            // cleanly). Putting the rotation directly on `inst` would
+            // OVERWRITE that imported matrix, which is what made the pig
+            // tilt sideways no matter what yaw we picked.
+            var yaw = new GameObject("YawWrap");
+            yaw.transform.SetParent(root.transform, false);
+            var inst = Object.Instantiate(prefab, yaw.transform);
             inst.name = "Model";
 
             // Strip imported colliders so navigation/aim raycasts ignore them.
@@ -176,18 +192,21 @@ namespace TrashRoyale.Match
                 Object.Destroy(col);
             }
 
-            // 1) Per-card orientation correction so Z-up source models stand
-            //    up. Applied to the model child; the outer root keeps a clean
-            //    transform that Unit/Tower can rotate to face targets.
-            //    Priority: cards.json `modelEulerX/Y/Z` (designer-tunable)
-            //    overrides the hardcoded OrientationOverride.
-            if (card.modelEulerX != 0f || card.modelEulerY != 0f || card.modelEulerZ != 0f)
-            {
-                inst.transform.localRotation = Quaternion.Euler(card.modelEulerX, card.modelEulerY, card.modelEulerZ);
-            }
-            else if (OrientationOverride.TryGetValue(card.id, out var rot))
+            // 1a) Hardcoded per-card orientation correction (e.g. Z-up
+            //     Sketchfab models that need a -90° X to stand up). This
+            //     stays on `inst` because it's a one-time "upright" fix
+            //     baked into the model — designers should not touch it.
+            if (OrientationOverride.TryGetValue(card.id, out var rot))
             {
                 inst.transform.localRotation = rot;
+            }
+
+            // 1b) Designer-tunable yaw (modelEulerX/Y/Z from cards.json)
+            //     applied to the wrapper so it acts on world axes after
+            //     the upright fix.
+            if (card.modelEulerX != 0f || card.modelEulerY != 0f || card.modelEulerZ != 0f)
+            {
+                yaw.transform.localRotation = Quaternion.Euler(card.modelEulerX, card.modelEulerY, card.modelEulerZ);
             }
 
             // 2) Compute combined renderer bounds AFTER rotation so the auto-
@@ -530,6 +549,37 @@ namespace TrashRoyale.Match
             // Tiny eyes.
             Sphere(go, new Color(0.05f, 0.05f, 0.05f), 0.06f, new Vector3(0.18f, 1.55f, 0.38f));
             Sphere(go, new Color(0.05f, 0.05f, 0.05f), 0.06f, new Vector3(-0.18f, 1.55f, 0.38f));
+        }
+
+        // IShowSpeed: red Roblox-shirt body, brown skin, black hair w/
+        // red headband. Used as a primitive fallback if the Sketchfab
+        // glTF for ishowspeed fails to import (e.g. KTX2 textures
+        // missing on the player's GPU). Spawn voiceline still plays
+        // because audio is keyed off the card id, not the renderer.
+        static void BuildIShowSpeed(GameObject go)
+        {
+            // Body — red Roblox-style shirt.
+            Body(go, new Color(0.85f, 0.15f, 0.15f), 0.95f, 0.55f);
+            // Head — brown skin tone.
+            Head(go, new Color(0.42f, 0.28f, 0.2f), 1.55f, 0.42f);
+            // Black hair tuft.
+            Sphere(go, new Color(0.08f, 0.06f, 0.06f), 0.46f, new Vector3(0f, 1.78f, -0.05f));
+            // Red headband.
+            Cube(go, new Color(0.95f, 0.1f, 0.1f), new Vector3(0.95f, 0.12f, 0.95f),
+                new Vector3(0f, 1.7f, 0f));
+            // Eyes.
+            Sphere(go, Color.white, 0.1f, new Vector3(-0.16f, 1.55f, 0.38f));
+            Sphere(go, Color.white, 0.1f, new Vector3(0.16f, 1.55f, 0.38f));
+            Sphere(go, Color.black, 0.045f, new Vector3(-0.16f, 1.55f, 0.46f));
+            Sphere(go, Color.black, 0.045f, new Vector3(0.16f, 1.55f, 0.46f));
+            // Open shouting mouth (he's literally always SUUUI-ing).
+            Cube(go, new Color(0.05f, 0.0f, 0.0f), new Vector3(0.22f, 0.16f, 0.05f),
+                new Vector3(0f, 1.32f, 0.4f));
+            // Black sneakers.
+            Cube(go, new Color(0.08f, 0.08f, 0.08f), new Vector3(0.32f, 0.18f, 0.42f),
+                new Vector3(-0.18f, 0.09f, 0f));
+            Cube(go, new Color(0.08f, 0.08f, 0.08f), new Vector3(0.32f, 0.18f, 0.42f),
+                new Vector3(0.18f, 0.09f, 0f));
         }
 
         // Doge Mage: blocky shiba in a wizard hat shooting splashy spells.

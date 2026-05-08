@@ -184,7 +184,19 @@ namespace TrashRoyale.Combat
             bool hasWeapon = card.range > 0f && card.attackInterval > 0f && card.damage > 0f;
             if (hasWeapon)
             {
-                if (_target == null || _target.isDead || _retargetCd <= 0f)
+                // Sticky targeting (matches Unit/Tower behavior): once a
+                // building locks on a live target it does NOT switch
+                // to a different one mid-attack — only when the target
+                // dies or leaves range. Prevents cannons from
+                // pirouetting between two equidistant attackers.
+                bool targetGone = _target == null || _target.isDead;
+                if (!targetGone && _target != null)
+                {
+                    var off = _target.transform.position - transform.position;
+                    off.y = 0f;
+                    if (off.sqrMagnitude > card.range * card.range) targetGone = true;
+                }
+                if (targetGone)
                 {
                     _target = CombatRegistry.FindClosestEnemy(transform.position, team,
                         card.range, /*buildingsOnly*/ false, card.targetsAir);

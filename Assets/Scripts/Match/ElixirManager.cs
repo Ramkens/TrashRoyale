@@ -20,9 +20,23 @@ namespace TrashRoyale.Match
 
         public void Tick(float dt, MatchPhase phase)
         {
+            Tick(dt, phase, 1f);
+        }
+
+        // overtimeMultiplier scales SingleRegenTime; 1f = no extra ramp.
+        // MatchManager passes a value in [3, 7] during MatchPhase.Overtime
+        // so each 30 seconds in OT bumps regen by +1× until the 7× cap.
+        public void Tick(float dt, MatchPhase phase, float overtimeMultiplier)
+        {
             float perSec = 1f / SingleRegenTime;
             if (phase == MatchPhase.DoubleElixir) perSec = 1f / DoubleRegenTime;
             else if (phase == MatchPhase.TripleElixir) perSec = 1f / TripleRegenTime;
+            else if (phase == MatchPhase.Overtime)
+            {
+                // Reuse SingleRegenTime as the base "1×" so a multiplier of
+                // 3 matches TripleElixir, 4 = 4× single, etc.
+                perSec = overtimeMultiplier / SingleRegenTime;
+            }
             Current = Mathf.Clamp(Current + perSec * dt, 0f, Max);
         }
 
