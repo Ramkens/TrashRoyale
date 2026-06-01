@@ -61,12 +61,34 @@ namespace TrashRoyale.AI
                 if (playerUnits >= 3) score += 8;
                 else score -= 4;
             }
+            if (c.Kind == CardKind.Building)
+            {
+                // Drop a defensive building when the player is pushing a
+                // BuildingsOnly attacker (pig, hog) at our base.
+                if (PlayerHasBuildingsOnlyAttacker()) score += 7;
+                else if (playerUnits >= 2) score += 2;
+                else score -= 2;
+            }
             if (c.targetMode == "BuildingsOnly" && playerUnits == 0) score += 3;
             if (c.elixirCost <= 3 && match.EnemyElixir.Current < 6) score += 2;
             if (c.elixirCost >= 6 && match.EnemyElixir.Current >= 8) score += 4;
             if (c.isAir) score += 1;
             if (playerUnits > enemyUnits + 1) score += 3;
             return score + Random.Range(0, 4);
+        }
+
+        bool PlayerHasBuildingsOnlyAttacker()
+        {
+            var all = CombatRegistry.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var d = all[i];
+                if (d == null || d.isDead) continue;
+                if (d.team != Team.Player) continue;
+                var u = d as Unit;
+                if (u != null && u.card != null && u.card.Targets == TargetMode.BuildingsOnly) return true;
+            }
+            return false;
         }
 
         int CountTeamUnits(Team t)
@@ -92,6 +114,14 @@ namespace TrashRoyale.AI
             {
                 z = Random.Range(-ArenaController.HalfLength + 1.5f, -1.5f);
             }
+            else if (card.Kind == CardKind.Building)
+            {
+                // Drop defensive buildings between the bot's princess towers
+                // and king — i.e. just behind the river on the bot side
+                // (positive z half for Team.Enemy).
+                z = Random.Range(1.5f, 4.0f);
+                side = ChooseDefenseSide();
+            }
             else
             {
                 if (card.targetMode == "BuildingsOnly")
@@ -106,6 +136,24 @@ namespace TrashRoyale.AI
             }
             float x = side * Random.Range(1.2f, 3.6f);
             return new Vector3(x, 0f, z);
+        }
+
+        // Pick the side where the player is currently pushing so the building
+        // sits in the path of the threat.
+        float ChooseDefenseSide()
+        {
+            int leftThreat = 0, rightThreat = 0;
+            var all = CombatRegistry.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var d = all[i];
+                if (d == null || d.isDead) continue;
+                if (d.team != Team.Player) continue;
+                if (d.transform.position.x < 0f) leftThreat++; else rightThreat++;
+            }
+            if (leftThreat > rightThreat) return -1f;
+            if (rightThreat > leftThreat) return 1f;
+            return Random.value < 0.5f ? -1f : 1f;
         }
 
         float ChooseAttackingSide()

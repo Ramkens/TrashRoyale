@@ -101,7 +101,28 @@ namespace TrashRoyale.Match
                 case "shrek":    BuildShrek(go); break;
                 case "gigachad": BuildGigachad(go); break;
                 case "nyancat":  BuildNyanCat(go); break;
+                case "bomber":   BuildBomber(go); break;
+                case "doge_mage": BuildDogeMage(go); break;
                 default:         BuildGeneric(go, card); break;
+            }
+            return go;
+        }
+
+        /// <summary>
+        /// Builds visual for stationary defensive buildings (cannon, tesla
+        /// tower, etc.). Uses primitives only — buildings don't need realistic
+        /// 3D meshes and primitives composite cleanly with the existing card
+        /// art on the deck.
+        /// </summary>
+        public static GameObject InstantiateBuilding(CardData card)
+        {
+            var go = new GameObject(card.id);
+            switch (card.id)
+            {
+                case "cannon": BuildCannon(go); break;
+                case "tesla":  BuildTesla(go); break;
+                case "totem":  BuildTotem(go); break;
+                default:       BuildGenericBuilding(go); break;
             }
             return go;
         }
@@ -458,6 +479,125 @@ namespace TrashRoyale.Match
             Object.DestroyImmediate(p.GetComponent<Collider>());
             p.GetComponent<MeshRenderer>().sharedMaterial = SafeShader.NewOpaqueMaterial(c);
             return p;
+        }
+
+        // ---------- New units (PR2) ----------
+
+        // Bomber: cute cartoon goblin lobbing a bomb. Splash damage.
+        static void BuildBomber(GameObject go)
+        {
+            Body(go, new Color(0.45f, 0.85f, 0.45f), 1.0f, 0.55f); // green body
+            Head(go, new Color(0.6f, 0.95f, 0.55f), 1.5f, 0.45f);
+            // Bomb in hand.
+            Sphere(go, new Color(0.1f, 0.1f, 0.1f), 0.18f, new Vector3(0.55f, 1.0f, 0.0f));
+            // Fuse.
+            Cube(go, new Color(1f, 0.7f, 0.2f), new Vector3(0.05f, 0.18f, 0.05f),
+                new Vector3(0.55f, 1.22f, 0.0f));
+            // Tiny eyes.
+            Sphere(go, new Color(0.05f, 0.05f, 0.05f), 0.06f, new Vector3(0.18f, 1.55f, 0.38f));
+            Sphere(go, new Color(0.05f, 0.05f, 0.05f), 0.06f, new Vector3(-0.18f, 1.55f, 0.38f));
+        }
+
+        // Doge Mage: blocky shiba in a wizard hat shooting splashy spells.
+        static void BuildDogeMage(GameObject go)
+        {
+            // Body — fluffy tan torso.
+            Body(go, new Color(0.95f, 0.78f, 0.5f), 0.9f, 0.65f);
+            // Head with snout.
+            Head(go, new Color(0.95f, 0.78f, 0.5f), 1.4f, 0.42f);
+            Cube(go, new Color(1f, 0.95f, 0.85f), new Vector3(0.35f, 0.25f, 0.45f),
+                new Vector3(0f, 1.32f, 0.45f));
+            // Wizard hat (purple cone is too fancy → stacked cubes).
+            Cube(go, new Color(0.4f, 0.2f, 0.6f), new Vector3(0.7f, 0.12f, 0.7f),
+                new Vector3(0f, 1.78f, 0f));
+            Cube(go, new Color(0.4f, 0.2f, 0.6f), new Vector3(0.4f, 0.45f, 0.4f),
+                new Vector3(0f, 2.05f, 0f));
+            // Star on hat.
+            Sphere(go, new Color(1f, 0.95f, 0.4f), 0.08f, new Vector3(0f, 2.32f, 0f));
+            // Floating staff orb (pre-shot).
+            Sphere(go, new Color(0.6f, 0.4f, 1f), 0.16f, new Vector3(0.55f, 1.0f, 0.0f));
+        }
+
+        // ---------- Buildings (PR2) ----------
+
+        static void BuildCannon(GameObject go)
+        {
+            // Stone base — wide cylinder.
+            var basePart = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            basePart.transform.SetParent(go.transform, false);
+            basePart.transform.localScale = new Vector3(1.4f, 0.25f, 1.4f);
+            basePart.transform.localPosition = new Vector3(0f, 0.25f, 0f);
+            Object.DestroyImmediate(basePart.GetComponent<Collider>());
+            basePart.GetComponent<MeshRenderer>().sharedMaterial =
+                SafeShader.NewOpaqueMaterial(new Color(0.45f, 0.45f, 0.5f));
+
+            // Pivot block.
+            Cube(go, new Color(0.3f, 0.3f, 0.35f), new Vector3(0.6f, 0.5f, 0.6f),
+                new Vector3(0f, 0.75f, 0f));
+
+            // Barrel — long cylinder pointing forward.
+            var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            barrel.transform.SetParent(go.transform, false);
+            barrel.transform.localScale = new Vector3(0.35f, 0.7f, 0.35f);
+            barrel.transform.localPosition = new Vector3(0f, 0.95f, 0.55f);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            Object.DestroyImmediate(barrel.GetComponent<Collider>());
+            barrel.GetComponent<MeshRenderer>().sharedMaterial =
+                SafeShader.NewOpaqueMaterial(new Color(0.2f, 0.2f, 0.25f));
+        }
+
+        static void BuildTesla(GameObject go)
+        {
+            // Stone base.
+            var basePart = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            basePart.transform.SetParent(go.transform, false);
+            basePart.transform.localScale = new Vector3(1.2f, 0.2f, 1.2f);
+            basePart.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            Object.DestroyImmediate(basePart.GetComponent<Collider>());
+            basePart.GetComponent<MeshRenderer>().sharedMaterial =
+                SafeShader.NewOpaqueMaterial(new Color(0.4f, 0.4f, 0.45f));
+
+            // Insulator stack.
+            Cube(go, new Color(0.85f, 0.85f, 0.85f), new Vector3(0.35f, 0.4f, 0.35f),
+                new Vector3(0f, 0.6f, 0f));
+            Cube(go, new Color(0.95f, 0.95f, 0.95f), new Vector3(0.5f, 0.1f, 0.5f),
+                new Vector3(0f, 0.85f, 0f));
+
+            // Coil — stacked rings.
+            for (int i = 0; i < 4; i++)
+            {
+                Cube(go, new Color(0.55f, 0.4f, 0.2f),
+                    new Vector3(0.55f - i * 0.05f, 0.06f, 0.55f - i * 0.05f),
+                    new Vector3(0f, 0.95f + i * 0.18f, 0f));
+            }
+
+            // Glowing cap — bright cyan sphere.
+            Sphere(go, new Color(0.4f, 0.95f, 1f), 0.18f, new Vector3(0f, 1.85f, 0f));
+            Sphere(go, new Color(0.85f, 0.95f, 1f), 0.08f, new Vector3(0f, 2.05f, 0f));
+        }
+
+        static void BuildTotem(GameObject go)
+        {
+            // Cursed totem: stacked cubes with painted faces.
+            Cube(go, new Color(0.45f, 0.3f, 0.2f), new Vector3(1.0f, 0.6f, 1.0f),
+                new Vector3(0f, 0.3f, 0f));
+            Cube(go, new Color(0.95f, 0.85f, 0.6f), new Vector3(0.85f, 0.55f, 0.85f),
+                new Vector3(0f, 0.9f, 0f));
+            // Eyes.
+            Sphere(go, new Color(0.95f, 0.2f, 0.2f), 0.08f, new Vector3(0.2f, 1.0f, 0.45f));
+            Sphere(go, new Color(0.95f, 0.2f, 0.2f), 0.08f, new Vector3(-0.2f, 1.0f, 0.45f));
+            Cube(go, new Color(0.6f, 0.3f, 0.2f), new Vector3(0.7f, 0.5f, 0.7f),
+                new Vector3(0f, 1.45f, 0f));
+            Cube(go, new Color(0.95f, 0.85f, 0.5f), new Vector3(0.55f, 0.4f, 0.55f),
+                new Vector3(0f, 1.85f, 0f));
+        }
+
+        static void BuildGenericBuilding(GameObject go)
+        {
+            Cube(go, new Color(0.5f, 0.5f, 0.55f), new Vector3(1.2f, 0.3f, 1.2f),
+                new Vector3(0f, 0.15f, 0f));
+            Cube(go, new Color(0.7f, 0.7f, 0.75f), new Vector3(0.8f, 1.2f, 0.8f),
+                new Vector3(0f, 0.9f, 0f));
         }
     }
 }
