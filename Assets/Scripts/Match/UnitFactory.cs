@@ -4,16 +4,33 @@ using TrashRoyale.Combat;
 
 namespace TrashRoyale.Match
 {
+    /// <summary>
+    /// Card -> world-object dispatcher. Spells go through <see cref="AreaSpell"/>,
+    /// stationary defensive structures go through <see cref="Building"/>, and
+    /// everything else spawns one or more mobile <see cref="Unit"/>s in a
+    /// circle around <paramref name="worldPos"/>.
+    /// </summary>
     public static class UnitFactory
     {
         public static void SpawnCard(CardData card, Team team, Vector3 worldPos)
         {
             if (card == null) return;
-            if (card.Kind == CardKind.Spell)
+            switch (card.Kind)
             {
-                AreaSpell.Cast(card, worldPos, team);
-                return;
+                case CardKind.Spell:
+                    AreaSpell.Cast(card, worldPos, team);
+                    return;
+                case CardKind.Building:
+                    SpawnBuilding(card, team, worldPos);
+                    return;
+                default:
+                    SpawnUnits(card, team, worldPos);
+                    return;
             }
+        }
+
+        static void SpawnUnits(CardData card, Team team, Vector3 worldPos)
+        {
             int count = Mathf.Max(1, card.spawnCount);
             for (int i = 0; i < count; i++)
             {
@@ -34,6 +51,21 @@ namespace TrashRoyale.Match
                 unit.aimPoint.SetParent(go.transform, false);
                 unit.aimPoint.localPosition = new Vector3(0, card.isAir ? 0.4f : 0.7f, 0);
             }
+        }
+
+        static void SpawnBuilding(CardData card, Team team, Vector3 worldPos)
+        {
+            var go = ModelLoader.InstantiateBuilding(card);
+            go.transform.position = worldPos;
+            // Buildings face the lane (toward enemy half) so cosmetic forward
+            // matches their projectile direction.
+            go.transform.rotation = Quaternion.Euler(0f, team == Team.Player ? 0f : 180f, 0f);
+            var b = go.GetComponent<Building>();
+            if (b == null) b = go.AddComponent<Building>();
+            b.Init(card, team);
+            b.aimPoint = new GameObject("Aim").transform;
+            b.aimPoint.SetParent(go.transform, false);
+            b.aimPoint.localPosition = new Vector3(0, 0.9f, 0);
         }
     }
 }

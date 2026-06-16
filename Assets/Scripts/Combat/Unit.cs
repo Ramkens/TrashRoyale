@@ -163,6 +163,18 @@ namespace TrashRoyale.Combat
                     FxFactory.SpawnRainbowBeam(transform.position + Vector3.up * 0.6f, _target.AimPos);
                     _target.TakeDamage(card.damage, this);
                 }
+                else if (card.splashRadius > 0f)
+                {
+                    // Ranged splash unit (Bomber, Doge Mage): lob a fireball-style
+                    // arc that detonates at the target's aim point and damages
+                    // every enemy in <c>splashRadius</c>.
+                    var origin = transform.position + Vector3.up * 0.6f;
+                    var impact = _target.AimPos;
+                    FxFactory.LaunchFireballMissile(origin, impact, card.splashRadius, () =>
+                    {
+                        ApplySplash(impact);
+                    });
+                }
                 else
                 {
                     Projectile.Spawn(transform.position + Vector3.up * 0.6f, _target, card.damage, team);
@@ -170,9 +182,42 @@ namespace TrashRoyale.Combat
             }
             else
             {
-                _target.TakeDamage(card.damage, this);
+                if (card.splashRadius > 0f)
+                {
+                    // Melee splash (e.g. shrek-mode swing): hit everyone in range.
+                    var impact = _target.AimPos;
+                    ApplySplash(impact);
+                }
+                else
+                {
+                    _target.TakeDamage(card.damage, this);
+                }
                 PlayThemedMelee(_target.AimPos);
             }
+        }
+
+        /// <summary>
+        /// Applies <c>card.damage</c> to every enemy <see cref="Damageable"/>
+        /// inside <c>card.splashRadius</c> of <paramref name="center"/>. Only
+        /// damages units (not the casting team), respects air-target rules,
+        /// and uses 2D distance so vertical air offsets don't dodge the AoE.
+        /// </summary>
+        void ApplySplash(Vector3 center)
+        {
+            float r2 = card.splashRadius * card.splashRadius;
+            var all = CombatRegistry.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var d = all[i];
+                if (d == null || d.isDead) continue;
+                if (d.team == team) continue;
+                if (d.isAir && !card.targetsAir) continue;
+                var dx = d.transform.position - center;
+                dx.y = 0;
+                if (dx.sqrMagnitude > r2) continue;
+                d.TakeDamage(card.damage, this);
+            }
+            FxFactory.SpawnExplosion(center, card.splashRadius);
         }
 
         void PlayThemedMelee(Vector3 hitPos)
